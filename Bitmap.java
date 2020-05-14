@@ -18,6 +18,8 @@ class Bitmap
 	int h = 32;
 	int scale = 16;
 	
+	boolean[] gfx = new boolean[64 * 32];;
+	
 	JLabel item;
 	
 	final byte WHITE = (byte) 255;
