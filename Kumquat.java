@@ -7,7 +7,7 @@ public class Kumquat
 		// check to see if user actually loaded game (comment out until more is done)
 //		if (args.length > 0)
 //		{
-			cpu.loadGame("BLINKY");
+			cpu.loadGame("blinky.ch8");
 /*		}
 		else
 		{
