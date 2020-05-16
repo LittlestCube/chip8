@@ -8,11 +8,13 @@ import java.io.IOException;
 
 import java.util.Random;
 
+import littlecube.unsigned.*;
+
 class CPU
 {
-	byte[] memory;
+	UnsignedByte[] memory;
 	
-	byte[] V;
+	UnsignedByte[] V;
 	
 	short[] stack;
 	
@@ -23,8 +25,8 @@ class CPU
 	short I;
 	short sp;
 	
-	byte delay_timer;
-	byte sound_timer;
+	UnsignedByte delay_timer;
+	UnsignedByte sound_timer;
 	
 	Bitmap bitmap = new Bitmap();
 	
@@ -38,10 +40,13 @@ class CPU
 		sp		= 0;
 		
 		stack = new short[16];
-		V = new byte[16];
-		memory = new byte[4096];
+		V = new UnsignedByte[16];
+		memory = new UnsignedByte[4096];
 		
 		drawFlag = false;
+		
+		delay_timer = new UnsignedByte(0);
+		sound_timer = new UnsignedByte(0);
 		
 		int[] tmp_chip8_fontset =
 		{ 
@@ -65,9 +70,19 @@ class CPU
 		
 		bitmap.frame.addKeyListener(input);
 		
-		for(int i = 0; i < 80; i++)
+		for (int i = 0; i < memory.length; i++)
 		{
-			memory[i] = (byte) tmp_chip8_fontset[i];
+			memory[i] = new UnsignedByte();
+		}
+		
+		for (int i = 0; i < 80; i++)
+		{
+			memory[i].set((byte) tmp_chip8_fontset[i]);
+		}
+		
+		for (int i = 0; i < V.length; i++)
+		{
+			V[i] = new UnsignedByte();
 		}
 	}
 	
@@ -77,21 +92,17 @@ class CPU
 		
 		for (int i = 0; i < buffer.length; i++)
 		{
-			memory[i + 0x200] = buffer[i];
+			memory[i + 0x200].set(buffer[i]);
 		}
 	}
 	
 	void cycle()
 	{
-		// todo: the rest of the opcodes
+		// todo: convert $opcode to UnsignedShort
 		
+		opcode = (short) ((memory[pc].get() << 8) | (memory[pc + 1].get() & 0xFF));
 		
-		if (pc <= 4095 && pc >= 0)
-		{
-			opcode = (short) ((memory[pc] << (short) 8) | (memory[pc + 1] & 0xFF));
-		}
-		
-		//System.out.println("0x" + Integer.toHexString(opcode & 0xFFFF) + "        pc: " + Integer.toHexString(pc & 0x0FFF));
+		System.out.println("0x" + Integer.toHexString(opcode & 0xFFFF) + "        pc: " + Integer.toHexString(pc & 0x0FFF));
 		
 		// BEGIN THE MADNESS
 		boolean opcodeNotFound = false;
@@ -150,7 +161,7 @@ class CPU
 			
 			case 0x3000:			// 0x3XNN: skips the next instruction if VX equals NN. (Usually the next instruction is a jump to skip a code block)
 			{
-				if (V[(opcode & 0x0F00) >> 8] == (byte) (opcode & 0x00FF))
+				if (V[(opcode & 0x0F00) >> 8].get() == (opcode & 0x00FF))
 				{
 					pc += 4;
 				}
@@ -164,7 +175,7 @@ class CPU
 			
 			case 0x4000:			// 0x4XNN: skips the next instruction if VX doesn't equal NN. (Usually the next instruction is a jump to skip a code block)
 			{
-				if (V[(opcode & 0x0F00) >> 8] != (byte) (opcode & 0x00FF))
+				if (V[(opcode & 0x0F00) >> 8].get() != (opcode & 0x00FF))
 				{
 					pc += 4;
 				}
@@ -181,21 +192,26 @@ class CPU
 				int VXaddr = (opcode & 0x0F00) >> 8;
 				int VYaddr = (opcode & 0x00F0) >> 4;
 				
-				if (V[VXaddr] == V[VYaddr])
+				if (V[VXaddr].get() == V[VYaddr].get())
+				{
+					pc += 4;
+				}
+				
+				else
 				{
 					pc += 2;
 				}
-				
-				pc += 2;
 				break;
 			}
 			
 			case 0x6000:			// 0x6XNN: sets VX to NN
 			{
-				int VXaddr = (opcode & 0x0F00) >> 8;
-				int val = opcode & 0x00FF;
+				System.out.println();
 				
-				V[VXaddr] = (byte) val;
+				int VXaddr = (opcode & 0x0F00) >> 8;
+				int val = V[0].unsign((byte) ((opcode & 0x00FF)));
+				
+				V[VXaddr].set(val);
 				
 				pc += 2;
 				break;
@@ -203,7 +219,7 @@ class CPU
 			
 			case 0x7000:			// 0x7XNN: adds NN to VX (carry flag is not changed)
 			{
-				V[(opcode & 0x0F00) >> 8] += (byte) (opcode & 0x00FF);
+				V[(opcode & 0x0F00) >> 8].add(opcode & 0x00FF);
 				
 				pc += 2;
 				break;
@@ -218,7 +234,7 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						V[VXaddr] = V[VYaddr];
+						V[VXaddr].set(V[VYaddr].get());
 						
 						pc += 2;
 						break;
@@ -229,7 +245,7 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						V[VXaddr] |= V[VYaddr];
+						V[VXaddr].or(V[VYaddr]);
 						
 						pc += 2;
 						break;
@@ -240,7 +256,7 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						V[VXaddr] &= V[VYaddr];
+						V[VXaddr].and(V[VYaddr]);
 						
 						pc += 2;
 						break;
@@ -251,7 +267,7 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						V[VXaddr] ^= V[VYaddr];
+						V[VXaddr].xor(V[VYaddr]);
 						
 						pc += 2;
 						break;
@@ -262,17 +278,17 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;	// the reason >> is used is because we need to shift the value over to the ones place nybble
 						int VYaddr = (opcode & 0x00F0) >> 4;	// same deal here, except it's already 4 bits farther than 0x0F00 was, so we only move it four bits
 						
-						if (V[VYaddr] > 0xFF - V[VXaddr])
+						if (V[VYaddr].get() > 0xFF - V[VXaddr].get())
 						{
-							V[0xF] = 1;							// set carry flag to 1, there was a carry
+							V[0xF].set(1);						// set carry flag to 1, there was a carry
 						}
 						
 						else
 						{
-							V[0xF] = 0;							// set carry flag to 0, there was not a carry
+							V[0xF].set(0);						// set carry flag to 0, there was no carry
 						}
 						
-						V[VXaddr] += V[VYaddr];
+						V[VXaddr].add(V[VYaddr]);
 						
 						pc += 2;
 						break;
@@ -283,17 +299,17 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						if (V[VYaddr] > V[VXaddr])
+						if (V[VYaddr].get() > V[VXaddr].get())
 						{
-							V[0xF] = 0;							// 0 means there was a borrow
+							V[0xF].set(0);						// 0 means there was a borrow
 						}
 						
 						else
 						{
-							V[0xF] = 1;							// 1 means there was no borrow
+							V[0xF].set(1);						// 1 means there was no borrow
 						}
 						
-						V[VXaddr] -= V[VYaddr];
+						V[VXaddr].sub(V[VYaddr].get());
 						
 						pc += 2;
 						break;
@@ -303,9 +319,9 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						V[0xF] = (byte) (V[VXaddr] & 0x01);		// take right-most bit and save it in VF
+						V[0xF].set((byte) (V[VXaddr].get() & 0x01));		// take right-most bit and save it in VF
 						
-						V[VXaddr] >>= (byte) 1;
+						V[VXaddr].set(V[VXaddr].get() >> 1);
 						
 						pc += 2;
 						break;
@@ -316,17 +332,17 @@ class CPU
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						int VYaddr = (opcode & 0x00F0) >> 4;
 						
-						if (V[VYaddr] > V[VXaddr])
+						if (V[VYaddr].get() > V[VXaddr].get())
 						{
-							V[0xF] = 0;							// 0 means there was a borrow
+							V[0xF].set(0);						// 0 means there was a borrow
 						}
 						
 						else
 						{
-							V[0xF] = 1;							// 1 means there was no borrow
+							V[0xF].set(1);						// 1 means there was no borrow
 						}
 						
-						V[VXaddr] = (byte) (V[VYaddr] - V[VXaddr]);
+						V[VXaddr].set((byte) (V[VYaddr].get() - V[VXaddr].get()));
 						
 						pc += 2;
 						break;
@@ -336,9 +352,9 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						V[0xF] = (byte) (V[VXaddr] >> 7);			// take left-most bit and save it in VF
+						V[0xF].set((byte) (V[VXaddr].b >> 7));	// take left-most bit and save it in VF
 						
-						V[VXaddr] <<= (byte) 1;
+						V[VXaddr].set(V[VXaddr].get() << 1);
 						
 						pc += 2;
 						break;
@@ -379,7 +395,7 @@ class CPU
 			
 			case 0xB000:			// 0xBNNN: jumps to the address NNN plus V0
 			{
-				pc = (short) ((opcode & 0x0FFF) + V[0x0]);
+				pc = (short) ((opcode & 0x0FFF) + V[0x0].get());
 				break;
 			}
 			
@@ -388,7 +404,7 @@ class CPU
 				Random random = new Random();
 				int randInt = random.nextInt();				// basically, we are generating a random number from 0-255, but nextInt() is garbage, so we just generate an int and mod 256 it
 				
-				V[opcode & 0x0F00 >> 8] = (byte) ((randInt % 256) & (opcode & 0x00FF));
+				V[opcode & 0x0F00 >> 8].set((randInt % 256) & (opcode & 0x00FF));
 				
 				pc += 2;
 				break;
@@ -398,22 +414,22 @@ class CPU
 									// each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction
 			case 0xD000:			// as described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
 			{
-				int xPos = V[(opcode & 0x0F00) >> 8];
-				int yPos = V[(opcode & 0x00F0) >> 4];
+				int xPos = V[(opcode & 0x0F00) >> 8].get();
+				int yPos = V[(opcode & 0x00F0) >> 4].get();
 				int spriteHeight = (opcode & 0x000F);
 				
-				V[0xF] = 0;
+				V[0xF].set(0);
 				for (int currLine = 0; currLine < spriteHeight; currLine++)
 				{
 					for (int currPixel = 0; currPixel < 8; currPixel++)
 					{
-						if ((memory[I + currLine] & (0x80 >> currPixel)) != 0)
+						if ((memory[I + currLine].get() & (0x80 >> currPixel)) != 0)
 						{
 							boolean collide = setPixel(xPos + currPixel, yPos + currLine);
 							
 							if (!collide)
 							{
-								V[0xF] = 1;
+								V[0xF].set(1);
 							}
 						}
 					}
@@ -430,7 +446,7 @@ class CPU
 				{
 					case 0x000E:	// 0xEX9E: skips the next instruction if the key stored in VX is pressed (usually the next instruction is a jump to skip a code block)
 					{
-						if (input.key[V[opcode & 0x0F00 >> 8]])
+						if (input.key[V[opcode & 0x0F00 >> 8].get()])
 						{
 							pc += 4;
 						}
@@ -444,7 +460,7 @@ class CPU
 					
 					case 0x0001:	// 0xEXA1: skips the next instruction if the key stored in VX isn't pressed (usually the next instruction is a jump to skip a code block)
 					{
-						if (!input.key[V[(opcode & 0x0F00) >> 8]])
+						if (!input.key[V[(opcode & 0x0F00) >> 8].get()])
 						{
 							pc += 4;
 						}
@@ -470,7 +486,7 @@ class CPU
 				{
 					case 0x0007:	// 0xFX07: sets VX to the value of the delay timer
 					{
-						V[(opcode & 0x0F00) >> 8] = delay_timer;
+						V[(opcode & 0x0F00) >> 8].set(delay_timer);
 						
 						pc += 2;
 						break;
@@ -482,7 +498,7 @@ class CPU
 						{
 							if (input.key[i])
 							{
-								V[(opcode & 0x0F00) >> 8] = (byte) i;
+								V[(opcode & 0x0F00) >> 8].set(i);
 								
 								pc += 2;
 							}
@@ -492,7 +508,7 @@ class CPU
 					
 					case 0x0015:	// 0xFX15: sets the delay timer to VX
 					{
-						delay_timer = (byte) (V[(opcode & 0x0F00) >> 8]);
+						delay_timer.set(V[(opcode & 0x0F00) >> 8].get());
 						
 						pc += 2;
 						break;
@@ -500,7 +516,7 @@ class CPU
 					
 					case 0x0018:	// 0xFX15: sets the sound timer to VX
 					{
-						sound_timer = (byte) (V[(opcode & 0x0F00) >> 8]);
+						sound_timer.set(V[(opcode & 0x0F00) >> 8].get());
 						
 						pc += 2;
 						break;
@@ -510,17 +526,17 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						if (I + V[VXaddr] > 0xFFF)
+						if (I + V[VXaddr].get() > 0xFFF)
 						{
-							V[0xF] = 1;
+							V[0xF].set(1);
 						}
 						
 						else
 						{
-							V[0xF] = 0;
+							V[0xF].set(0);
 						}
 						
-						I += V[VXaddr];
+						I += V[VXaddr].get();
 						
 						pc += 2;
 						break;
@@ -528,7 +544,7 @@ class CPU
 					
 					case 0x0029:	// 0xFX29: sets I to the location of the sprite for the character in VX. characters 0-F (in hexadecimal) are represented by a 4x5 font
 					{
-						I = (short) (V[(opcode & 0x0F00) >> 8] * 0x5);
+						I = (short) (V[(opcode & 0x0F00) >> 8].get() * 0x5);
 						
 						pc += 2;
 						break;
@@ -538,15 +554,15 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						byte lDigit = (byte) ((V[VXaddr] - (V[VXaddr] % 100)));
-						byte mDigit = (byte) ((V[VXaddr] - (V[VXaddr] % 10)));
-						byte rDigit = (byte) (V[VXaddr] - lDigit - mDigit);
+						UnsignedByte lDigit = new UnsignedByte(V[VXaddr].get() - (V[VXaddr].get() % 100));
+						UnsignedByte mDigit = new UnsignedByte(V[VXaddr].get() - (V[VXaddr].get() % 10));
+						UnsignedByte rDigit = new UnsignedByte(V[VXaddr].get() - lDigit.get() - mDigit.get());
 						
-						System.out.println(lDigit + " " + mDigit + " " + rDigit);
+						System.out.println(lDigit.get() + " " + mDigit.get() + " " + rDigit.get());
 						
-						memory[I] = lDigit;
-						memory[I + 1] = mDigit;
-						memory[I + 2] = rDigit;
+						memory[I].set(lDigit.b);
+						memory[I + 1].set(mDigit.b);
+						memory[I + 2].set(rDigit.b);
 					}
 					
 					case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I. the offset from I is increased by 1 for each value written, but I itself is left unmodified
@@ -555,7 +571,7 @@ class CPU
 						
 						for (int i = 0; i <= VXaddr; i++)
 						{
-							memory[I + i] = (byte) V[i];
+							memory[I + i].set(V[i].b);
 						}
 						
 						I += VXaddr + 1;
@@ -570,7 +586,7 @@ class CPU
 						
 						for (int i = 0; i <= VXaddr; i++)
 						{
-							V[i] = memory[I + i];
+							V[i].set(memory[I + i]);
 						}
 						
 						I += VXaddr + 1;
@@ -598,19 +614,19 @@ class CPU
 		// ahh, end the madness
 		
 		// Update timers
-		if (delay_timer > 0)
+		if (delay_timer.get() > 0)
 		{
-			--delay_timer;
+			delay_timer.sub(1);
 		}
 			
-		if (sound_timer > 0)
+		if (sound_timer.get() > 0)
 		{
-			if (sound_timer == 1)
+			if (sound_timer.get() == 1)
 			{
 				System.out.println("BEEP!");
 			}
 			
-			--sound_timer;
+			sound_timer.sub(1);
 		}
 	}
 	
@@ -621,16 +637,6 @@ class CPU
 	
 	boolean setPixel(int x, int y)
 	{
-		if (x > 63)
-		{
-			return true;
-		}
-		
-		if (y > 31)
-		{
-			return true;
-		}
-		
 		bitmap.gfx[x + (bitmap.w * y)] ^= true;
 		
 		return bitmap.gfx[x + (bitmap.w * y)];					// returns true if no collision

@@ -92,6 +92,7 @@ class Bitmap
 	{
 		debugFrame.add(debugDisplay);
 		debugFrame.pack();
+		debugFrame.setTitle("Debugger");
 	}
 	
 	void debugRender()

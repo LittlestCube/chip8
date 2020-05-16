@@ -5,7 +5,7 @@ class Input implements KeyListener
 {
 	boolean[] key;
 	
-	boolean stopCycle;
+	public boolean stopCycle;
 	
 	Input()
 	{
@@ -117,6 +117,8 @@ class Input implements KeyListener
 			case KeyEvent.VK_SPACE:
 			{
 				stopCycle ^= true;
+				System.out.println(stopCycle);
+				break;
 			}
 		}
 	}
