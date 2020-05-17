@@ -5,8 +5,8 @@ run:
 	java Kumquat
 
 clean:
-	rm *.class
-	rm -r littlecube
+	rm *.class || continue
+	rm -r littlecube || continue
 
 submodule: clean
 	git submodule update --init --recursive --remote --merge

@@ -105,7 +105,7 @@ class CPU
 	{
 		// todo: convert $opcode to UnsignedShort
 		
-		opcode = (short) ((memory[pc].get() << 8) | (memory[pc + 1].get() & 0xFF));
+		opcode = (short) ((memory[pc].b << 8) | (memory[pc + 1].b & 0xFF));
 		
 		System.out.println("0x" + Integer.toHexString(opcode & 0xFFFF) + "        pc: " + Integer.toHexString(pc & 0x0FFF));
 		
