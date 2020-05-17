@@ -60,6 +60,13 @@ class Bitmap
 		frame.repaint();
 	}
 	
+	boolean setPixel(int x, int y)
+	{
+		gfx[x + (w * y)] ^= true;
+		
+		return gfx[x + (w * y)];			// returns true if no collision
+	}
+	
 	public void setPixels()
 	{
 		for (int x = 0; x < w; x++)
@@ -98,11 +105,11 @@ class Bitmap
 	void debugRender()
 	{
 		// Draw
-		for(int y = 0; y < 32; y++)
+		for(int y = 0; y < h; y++)
 		{
-			for(int x = 0; x < 64; x++)
+			for(int x = 0; x < w; x++)
 			{
-				if(gfx[(y * 64) + x]) 
+				if(gfx[(y * w) + x]) 
 					System.out.print("O");
 				else 
 					System.out.print(" ");

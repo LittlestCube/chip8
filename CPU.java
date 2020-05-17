@@ -16,13 +16,13 @@ class CPU
 	
 	UnsignedByte[] V;
 	
-	short[] stack;
+	UnsignedShort[] stack;
 	
 	boolean drawFlag;
 	
 	short pc;
 	short opcode;
-	short I;
+	UnsignedShort I;
 	short sp;
 	
 	UnsignedByte delay_timer;
@@ -34,12 +34,12 @@ class CPU
 	
 	CPU() throws Exception
 	{
-		pc		= 0x200;
-		opcode	= 0;
-		I		= 0;
-		sp		= 0;
+		pc = 0x200;
+		opcode = 0;
+		I = new UnsignedShort();
+		sp = 0;
 		
-		stack = new short[16];
+		stack = new UnsignedShort[16];
 		V = new UnsignedByte[16];
 		memory = new UnsignedByte[4096];
 		
@@ -70,6 +70,16 @@ class CPU
 		
 		bitmap.frame.addKeyListener(input);
 		
+		for (int i = 0; i < stack.length; i++)
+		{
+			stack[i] = new UnsignedShort();
+		}
+		
+		for (int i = 0; i < V.length; i++)
+		{
+			V[i] = new UnsignedByte();
+		}
+		
 		for (int i = 0; i < memory.length; i++)
 		{
 			memory[i] = new UnsignedByte();
@@ -77,12 +87,7 @@ class CPU
 		
 		for (int i = 0; i < 80; i++)
 		{
-			memory[i].set((byte) tmp_chip8_fontset[i]);
-		}
-		
-		for (int i = 0; i < V.length; i++)
-		{
-			V[i] = new UnsignedByte();
+			memory[i].set(tmp_chip8_fontset[i]);
 		}
 	}
 	
@@ -130,8 +135,9 @@ class CPU
 					case 0x00EE:	// 0x00EE: returns from a subroutine
 					{
 						sp -= 1;
-						pc = stack[sp];
-						stack[sp] = (short) 0;
+						pc = stack[sp].s;
+						stack[sp].set(0);
+						stack[sp + 1].set(0);
 						
 						pc += 2;
 						break;
@@ -153,7 +159,7 @@ class CPU
 			
 			case 0x2000:			// 0x2NNN: calls subroutine at NNN
 			{
-				stack[sp] = pc;
+				stack[sp].set(pc);
 				sp += 1;
 				pc = (short) (opcode & 0x0FFF);
 				break;
@@ -161,7 +167,7 @@ class CPU
 			
 			case 0x3000:			// 0x3XNN: skips the next instruction if VX equals NN. (Usually the next instruction is a jump to skip a code block)
 			{
-				if (V[(opcode & 0x0F00) >> 8].get() == (opcode & 0x00FF))
+				if (V[(opcode & 0x0F00) >> 8].b == (byte) (opcode & 0x00FF))
 				{
 					pc += 4;
 				}
@@ -175,7 +181,7 @@ class CPU
 			
 			case 0x4000:			// 0x4XNN: skips the next instruction if VX doesn't equal NN. (Usually the next instruction is a jump to skip a code block)
 			{
-				if (V[(opcode & 0x0F00) >> 8].get() != (opcode & 0x00FF))
+				if (V[(opcode & 0x0F00) >> 8].b != (byte) (opcode & 0x00FF))		// try casting both of these to (byte)
 				{
 					pc += 4;
 				}
@@ -206,10 +212,8 @@ class CPU
 			
 			case 0x6000:			// 0x6XNN: sets VX to NN
 			{
-				System.out.println();
-				
 				int VXaddr = (opcode & 0x0F00) >> 8;
-				int val = V[0].unsign((byte) ((opcode & 0x00FF)));
+				int val = V[0].unsign((byte) (opcode & 0x00FF));
 				
 				V[VXaddr].set(val);
 				
@@ -387,7 +391,7 @@ class CPU
 			
 			case 0xA000:			// 0xANNN: sets I to the address NNN
 			{
-				I = (short) (opcode & 0x0FFF);
+				I.set(opcode & 0x0FFF);
 				
 				pc += 2;
 				break;
@@ -423,7 +427,7 @@ class CPU
 				{
 					for (int currPixel = 0; currPixel < 8; currPixel++)
 					{
-						if ((memory[I + currLine].get() & (0x80 >> currPixel)) != 0)
+						if ((memory[I.get() + currLine].b & (0x80 >> currPixel)) != 0)
 						{
 							boolean collide = setPixel(xPos + currPixel, yPos + currLine);
 							
@@ -526,7 +530,7 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						if (I + V[VXaddr].get() > 0xFFF)
+						if (I.get() + V[VXaddr].get() > 0xFFF)
 						{
 							V[0xF].set(1);
 						}
@@ -536,7 +540,7 @@ class CPU
 							V[0xF].set(0);
 						}
 						
-						I += V[VXaddr].get();
+						I.add(V[VXaddr].get());
 						
 						pc += 2;
 						break;
@@ -544,7 +548,7 @@ class CPU
 					
 					case 0x0029:	// 0xFX29: sets I to the location of the sprite for the character in VX. characters 0-F (in hexadecimal) are represented by a 4x5 font
 					{
-						I = (short) (V[(opcode & 0x0F00) >> 8].get() * 0x5);
+						I.set(V[(opcode & 0x0F00) >> 8].get() * 0x5);
 						
 						pc += 2;
 						break;
@@ -554,15 +558,15 @@ class CPU
 					{
 						int VXaddr = (opcode & 0x0F00) >> 8;
 						
-						UnsignedByte lDigit = new UnsignedByte(V[VXaddr].get() - (V[VXaddr].get() % 100));
-						UnsignedByte mDigit = new UnsignedByte(V[VXaddr].get() - (V[VXaddr].get() % 10));
-						UnsignedByte rDigit = new UnsignedByte(V[VXaddr].get() - lDigit.get() - mDigit.get());
+						UnsignedByte lDigit = new UnsignedByte(V[VXaddr].get() / 100);
+						UnsignedByte mDigit = new UnsignedByte((V[VXaddr].get() / 10) % 10);
+						UnsignedByte rDigit = new UnsignedByte((V[VXaddr].get() % 100) % 10);
 						
 						System.out.println(lDigit.get() + " " + mDigit.get() + " " + rDigit.get());
 						
-						memory[I].set(lDigit.b);
-						memory[I + 1].set(mDigit.b);
-						memory[I + 2].set(rDigit.b);
+						memory[I.get()].set(lDigit.get());
+						memory[I.get() + 1].set(mDigit.get());
+						memory[I.get() + 2].set(rDigit.get());
 					}
 					
 					case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I. the offset from I is increased by 1 for each value written, but I itself is left unmodified
@@ -571,10 +575,10 @@ class CPU
 						
 						for (int i = 0; i <= VXaddr; i++)
 						{
-							memory[I + i].set(V[i].b);
+							memory[I.get() + i].set(V[i].b);
 						}
 						
-						I += VXaddr + 1;
+						I.add(VXaddr + 1);
 						
 						pc += 2;
 						break;
@@ -586,10 +590,10 @@ class CPU
 						
 						for (int i = 0; i <= VXaddr; i++)
 						{
-							V[i].set(memory[I + i]);
+							V[i].set(memory[I.get() + i]);
 						}
 						
-						I += VXaddr + 1;
+						I.add(VXaddr + 1);
 						
 						pc += 2;
 						break;
@@ -637,9 +641,7 @@ class CPU
 	
 	boolean setPixel(int x, int y)
 	{
-		bitmap.gfx[x + (bitmap.w * y)] ^= true;
-		
-		return bitmap.gfx[x + (bitmap.w * y)];					// returns true if no collision
+		return bitmap.setPixel(x, y);
 	}
 	
 	void setPixels()
@@ -656,4 +658,4 @@ class CPU
 		}
 		drawFlag = true;
 	}
-}
+}	

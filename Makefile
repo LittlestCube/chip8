@@ -6,7 +6,9 @@ run:
 
 clean:
 	rm *.class
+	rm -r littlecube
 
-submodule:
+submodule: clean
 	git submodule update --init --recursive --remote --merge
-	cp -r unsigned/littlecube ./littlecube
+	git submodule foreach git pull origin master
+	cp -r unsigned/littlecube littlecube
