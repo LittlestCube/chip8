@@ -91,6 +91,11 @@ class CPU
 		}
 	}
 	
+	void nextOp()
+	{
+		pc += 2;
+	}
+	
 	void loadGame(String filename) throws IOException
 	{
 		byte[] buffer = Files.readAllBytes(Paths.get(filename));
@@ -103,518 +108,439 @@ class CPU
 	
 	void cycle()
 	{
-		// todo: convert $opcode to UnsignedShort
+		// todo: convert $opcode to UnsignedShort (maybe)
 		
-		opcode = (short) ((memory[pc].b << 8) | (memory[pc + 1].b & 0xFF));
-		
-		System.out.println("0x" + Integer.toHexString(opcode & 0xFFFF) + "        pc: " + Integer.toHexString(pc & 0x0FFF));
-		
-		// BEGIN THE MADNESS
-		boolean opcodeNotFound = false;
-		
-		switch (opcode & 0xF000)
+		if (pc <= 4095 && pc >= 0)
+	{
+		opcode = (short) ((memory[pc].get() << (short) 8) | memory[pc + 1].get());
+	}
+	
+	else
+	{
+		System.out.println("\npc 0x" + pc + " out of bounds, closing...");
+		System.exit(1);
+	}
+	
+	UnsignedByte VXaddr = new UnsignedByte((opcode & 0x0F00) >> 8);
+	UnsignedByte VYaddr = new UnsignedByte((opcode & 0x00F0) >> 4);
+	UnsignedByte N = new UnsignedByte(opcode & 0x000F);
+	UnsignedByte NN = new UnsignedByte(opcode & 0x00FF);
+	UnsignedShort NNN = new UnsignedShort(opcode & 0x0FFF);
+	
+	switch (opcode & 0xF000)
+	{
+		case 0x0000:
 		{
-			case 0x0000:
+			switch (opcode & 0x00FF)
 			{
-				switch (opcode & 0x00FF)
+				case 0x00E0:	// 0x00E0: clears the screen
 				{
-/*					case 0x0000:	// 0x0000: calls RCA 1802 program at address NNN. not necessary for most ROMs
-					{
-						pc = (short) (opcode & 0x0FFF);
-						break;
-					}
-*/					
-					case 0x00E0:	// 0x00E0: clears the screen
-					{
-						clearDisplay();
-						
-						pc += 2;
-						break;
-					}
+					clearDisplay();
 					
-					case 0x00EE:	// 0x00EE: returns from a subroutine
-					{
-						sp -= 1;
-						pc = stack[sp].s;
-						stack[sp].set(0);
-						stack[sp + 1].set(0);
-						
-						pc += 2;
-						break;
-					}
-					
-					default:									// opcode not recognized
-					{
-						opcodeNotFound = true;
-					}
-				}
-				break;
-			}
-			
-			case 0x1000:			// 0x1NNN: jumps to address NNN
-			{
-				pc = (short) (opcode & 0x0FFF);
-				break;
-			}
-			
-			case 0x2000:			// 0x2NNN: calls subroutine at NNN
-			{
-				stack[sp].set(pc);
-				sp += 1;
-				pc = (short) (opcode & 0x0FFF);
-				break;
-			}
-			
-			case 0x3000:			// 0x3XNN: skips the next instruction if VX equals NN. (Usually the next instruction is a jump to skip a code block)
-			{
-				if (V[(opcode & 0x0F00) >> 8].b == (byte) (opcode & 0x00FF))
-				{
-					pc += 4;
+					nextOp();
+					break;
 				}
 				
-				else
+				case 0x00EE:	// 0x00EE: returns from a subroutine
 				{
-					pc += 2;
-				}
-				break;
-			}
-			
-			case 0x4000:			// 0x4XNN: skips the next instruction if VX doesn't equal NN. (Usually the next instruction is a jump to skip a code block)
-			{
-				if (V[(opcode & 0x0F00) >> 8].b != (byte) (opcode & 0x00FF))		// try casting both of these to (byte)
-				{
-					pc += 4;
-				}
-				
-				else
-				{
-					pc += 2;
-				}
-				break;
-			}
-			
-			case 0x5000:			// 0x5XY0: skips the next instruction if VX equals VY. (usually the next instruction is a jump to skip a code block)
-			{
-				int VXaddr = (opcode & 0x0F00) >> 8;
-				int VYaddr = (opcode & 0x00F0) >> 4;
-				
-				if (V[VXaddr].get() == V[VYaddr].get())
-				{
-					pc += 4;
-				}
-				
-				else
-				{
-					pc += 2;
-				}
-				break;
-			}
-			
-			case 0x6000:			// 0x6XNN: sets VX to NN
-			{
-				int VXaddr = (opcode & 0x0F00) >> 8;
-				int val = V[0].unsign((byte) (opcode & 0x00FF));
-				
-				V[VXaddr].set(val);
-				
-				pc += 2;
-				break;
-			}
-			
-			case 0x7000:			// 0x7XNN: adds NN to VX (carry flag is not changed)
-			{
-				V[(opcode & 0x0F00) >> 8].add(opcode & 0x00FF);
-				
-				pc += 2;
-				break;
-			}
-			
-			case 0x8000:
-			{
-				switch (opcode & 0x000F)
-				{
-					case 0x0000:	// 0x8XY0: sets VX to the value of VY
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						V[VXaddr].set(V[VYaddr].get());
-						
-						pc += 2;
-						break;
-					}
+					--sp;
+					pc = (short) stack[sp].get();
+					stack[sp].set(0);
 					
-					case 0x0001:	// 0x8XY1: sets VX to VX or VY (bitwise OR operation)
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						V[VXaddr].or(V[VYaddr]);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0002:	// 0x8XY2: sets VX to VX and VY (bitwise AND operation)
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						V[VXaddr].and(V[VYaddr]);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0003:	// 0x8XY3: sets VX to VX xor VY (bitwise XOR operation)
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						V[VXaddr].xor(V[VYaddr]);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0004:	// 0x8XY4: adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;	// the reason >> is used is because we need to shift the value over to the ones place nybble
-						int VYaddr = (opcode & 0x00F0) >> 4;	// same deal here, except it's already 4 bits farther than 0x0F00 was, so we only move it four bits
-						
-						if (V[VYaddr].get() > 0xFF - V[VXaddr].get())
-						{
-							V[0xF].set(1);						// set carry flag to 1, there was a carry
-						}
-						
-						else
-						{
-							V[0xF].set(0);						// set carry flag to 0, there was no carry
-						}
-						
-						V[VXaddr].add(V[VYaddr]);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0005:	// 0x8XY5: VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't; additional findings reveal that a "borrow" in bit operations means that VY is greater than VX
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						if (V[VYaddr].get() > V[VXaddr].get())
-						{
-							V[0xF].set(0);						// 0 means there was a borrow
-						}
-						
-						else
-						{
-							V[0xF].set(1);						// 1 means there was no borrow
-						}
-						
-						V[VXaddr].sub(V[VYaddr].get());
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0006:	// 0x8X?6: stores the least significant bit of VX in VF and then shifts VX to the right by 1
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						V[0xF].set((byte) (V[VXaddr].get() & 0x01));		// take right-most bit and save it in VF
-						
-						V[VXaddr].set(V[VXaddr].get() >> 1);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0007:	// 0x8XY7: sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						int VYaddr = (opcode & 0x00F0) >> 4;
-						
-						if (V[VYaddr].get() > V[VXaddr].get())
-						{
-							V[0xF].set(0);						// 0 means there was a borrow
-						}
-						
-						else
-						{
-							V[0xF].set(1);						// 1 means there was no borrow
-						}
-						
-						V[VXaddr].set((byte) (V[VYaddr].get() - V[VXaddr].get()));
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x000E:	// 0x8X?E: stores the most significant bit of VX in VF and then shifts VX to the left by 1
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						V[0xF].set((byte) (V[VXaddr].b >> 7));	// take left-most bit and save it in VF
-						
-						V[VXaddr].set(V[VXaddr].get() << 1);
-						
-						pc += 2;
-						break;
-					}
-					
-					default:									// opcode not recognized
-					{
-						opcodeNotFound = true;
-					}
-				}
-				break;
-			}
-			
-			case 0x9000:			// 0x9XY0: skips the next instruction if VX doesn't equal VY (usually the next instruction is a jump to skip a code block)
-			{
-				int VXaddr = (opcode & 0x0F00) >> 8;
-				int VYaddr = (opcode & 0x00F0) >> 4;
-				
-				if (V[VXaddr] != V[VYaddr])
-				{
-					pc += 4;
-				}
-				
-				else
-				{
-					pc += 2;
-				}	
-				break;
-			}
-			
-			case 0xA000:			// 0xANNN: sets I to the address NNN
-			{
-				I.set(opcode & 0x0FFF);
-				
-				pc += 2;
-				break;
-			}
-			
-			case 0xB000:			// 0xBNNN: jumps to the address NNN plus V0
-			{
-				pc = (short) ((opcode & 0x0FFF) + V[0x0].get());
-				break;
-			}
-			
-			case 0xC000:			// 0xCXNN: sets VX to the result of a bitwise and operation on a random number (typically: 0 to 255) and NN
-			{
-				Random random = new Random();
-				int randInt = random.nextInt();				// basically, we are generating a random number from 0-255, but nextInt() is garbage, so we just generate an int and mod 256 it
-				
-				V[opcode & 0x0F00 >> 8].set((randInt % 256) & (opcode & 0x00FF));
-				
-				pc += 2;
-				break;
-			}
-			
-									// 0xDXYN: draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels
-									// each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction
-			case 0xD000:			// as described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
-			{
-				int xPos = V[(opcode & 0x0F00) >> 8].get();
-				int yPos = V[(opcode & 0x00F0) >> 4].get();
-				int spriteHeight = (opcode & 0x000F);
-				
-				V[0xF].set(0);
-				for (int currLine = 0; currLine < spriteHeight; currLine++)
-				{
-					for (int currPixel = 0; currPixel < 8; currPixel++)
-					{
-						if ((memory[I.get() + currLine].b & (0x80 >> currPixel)) != 0)
-						{
-							boolean collide = setPixel(xPos + currPixel, yPos + currLine);
-							
-							if (!collide)
-							{
-								V[0xF].set(1);
-							}
-						}
-					}
-				}
-				
-				drawFlag = true;
-				pc += 2;
-				break;
-			}
-			
-			case 0xE000:
-			{
-				switch (opcode & 0x000F)
-				{
-					case 0x000E:	// 0xEX9E: skips the next instruction if the key stored in VX is pressed (usually the next instruction is a jump to skip a code block)
-					{
-						if (input.key[V[opcode & 0x0F00 >> 8].get()])
-						{
-							pc += 4;
-						}
-						
-						else
-						{
-							pc += 2;
-						}
-						break;
-					}
-					
-					case 0x0001:	// 0xEXA1: skips the next instruction if the key stored in VX isn't pressed (usually the next instruction is a jump to skip a code block)
-					{
-						if (!input.key[V[(opcode & 0x0F00) >> 8].get()])
-						{
-							pc += 4;
-						}
-						
-						else
-						{
-							pc += 2;
-						}
-						break;
-					}
-					
-					default:									// opcode not recognized
-					{
-						opcodeNotFound = true;
-					}
-				}
-				break;
-			}
-			
-			case 0xF000:
-			{
-				switch (opcode & 0x00FF)
-				{
-					case 0x0007:	// 0xFX07: sets VX to the value of the delay timer
-					{
-						V[(opcode & 0x0F00) >> 8].set(delay_timer);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x000A:	// 0xFX0A: a key press is awaited, and then stored in VX (blocking operation: all instruction halted until next key event)
-					{
-						for (int i = 0; i < input.key.length; i++)
-						{
-							if (input.key[i])
-							{
-								V[(opcode & 0x0F00) >> 8].set(i);
-								
-								pc += 2;
-							}
-						}
-						break;
-					}
-					
-					case 0x0015:	// 0xFX15: sets the delay timer to VX
-					{
-						delay_timer.set(V[(opcode & 0x0F00) >> 8].get());
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0018:	// 0xFX15: sets the sound timer to VX
-					{
-						sound_timer.set(V[(opcode & 0x0F00) >> 8].get());
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x001E:	// 0xFX1E: adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						if (I.get() + V[VXaddr].get() > 0xFFF)
-						{
-							V[0xF].set(1);
-						}
-						
-						else
-						{
-							V[0xF].set(0);
-						}
-						
-						I.add(V[VXaddr].get());
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0029:	// 0xFX29: sets I to the location of the sprite for the character in VX. characters 0-F (in hexadecimal) are represented by a 4x5 font
-					{
-						I.set(V[(opcode & 0x0F00) >> 8].get() * 0x5);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0033:	// 0xFX33: stores the binary-coded decimal representation of VX in memory[I], with the greatest digit in memory[I], the middle digit in memory[I + 1] and the smallest digit in memory[I + 2] (I remains unchanged)
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						UnsignedByte lDigit = new UnsignedByte(V[VXaddr].get() / 100);
-						UnsignedByte mDigit = new UnsignedByte((V[VXaddr].get() / 10) % 10);
-						UnsignedByte rDigit = new UnsignedByte((V[VXaddr].get() % 100) % 10);
-						
-						System.out.println(lDigit.get() + " " + mDigit.get() + " " + rDigit.get());
-						
-						memory[I.get()].set(lDigit.get());
-						memory[I.get() + 1].set(mDigit.get());
-						memory[I.get() + 2].set(rDigit.get());
-					}
-					
-					case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I. the offset from I is increased by 1 for each value written, but I itself is left unmodified
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						for (int i = 0; i <= VXaddr; i++)
-						{
-							memory[I.get() + i].set(V[i].b);
-						}
-						
-						I.add(VXaddr + 1);
-						
-						pc += 2;
-						break;
-					}
-					
-					case 0x0065:	// 0xFX65: fills V0 to VX (including VX) with values from memory starting at address I. the offset from I is increased by 1 for each value written, but I itself is left unmodified
-					{
-						int VXaddr = (opcode & 0x0F00) >> 8;
-						
-						for (int i = 0; i <= VXaddr; i++)
-						{
-							V[i].set(memory[I.get() + i]);
-						}
-						
-						I.add(VXaddr + 1);
-						
-						pc += 2;
-						break;
-					}
-					
-					default:									// opcode not recognized
-					{
-						opcodeNotFound = true;
-					}
+					nextOp();
 					break;
 				}
 			}
-			default:
+			break;
+		}
+		
+		case 0x1000:			// 0x1NNN: jumps to address NNN
+		{
+			pc = (short) NNN.get();
+			break;
+		}
+		
+		case 0x2000:			// 0x2NNN: calls subroutine at NNN
+		{
+			stack[sp].set(pc);
+			++sp;
+			pc = (short) NNN.get();
+			break;
+		}
+		
+		case 0x3000:			// 0x3XNN: skips the next instruction if VX equals NN
+		{
+			if (V[VXaddr.get()].get() == NN.get())
 			{
-				if (opcodeNotFound)
+				nextOp();
+			}
+			
+			nextOp();
+			break;
+		}
+		
+		case 0x4000:			// 0x4000: skips the next instruction if VX doesn't equal NN
+		{
+			if (V[VXaddr.get()].get() != NN.get())
+			{
+				nextOp();
+			}
+			
+			nextOp();
+			break;
+		}
+		
+		case 0x5000:			// 0x5XY0: skips the next instruction if VX equals VY
+		{
+			if (V[VXaddr.get()].get() == V[VYaddr.get()].get())
+			{
+				nextOp();
+			}
+			
+			nextOp();
+			break;
+		}
+		
+		case 0x6000:			// 0x6XNN: sets VX to NN
+		{
+			V[VXaddr.get()].set(NN.get());
+			
+			nextOp();
+			break;
+		}
+		
+		case 0x7000:			// 0x7XNN: adds NN to VX
+		{
+			V[VXaddr.get()].add(NN.get());
+			
+			nextOp();
+			break;
+		}
+		
+		case 0x8000:
+		{
+			switch (opcode & 0x000F)
+			{
+				case 0x0000:	// 0x8XY0: sets VX to the value of VY
 				{
-					System.out.println("opcode not recognized: 0x" + Integer.toHexString(opcode & 0xFFFF));
-					System.exit(1);
+					V[VXaddr.get()].set(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0001:	// 0x8XY0: sets VX to VX | VY
+				{
+					V[VXaddr.get()].or(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0002:	// 0x8XY2: sets VX to VX & VY
+				{
+					V[VXaddr.get()].and(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0003:	// 0x8XY3: sets VX to VX ^ VY
+				{
+					V[VXaddr.get()].xor(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0004:	// 0x8XY4: adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't
+				{
+					if (V[VXaddr.get()].get() + V[VYaddr.get()].get() > 255)
+					{
+						V[0xF].set(1);
+					}
+					
+					else
+					{
+						V[0xF].set(0);
+					}
+					
+					V[VXaddr.get()].add(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0005:	// 0x8XY5: VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't
+				{
+					if (V[VYaddr.get()].get() > V[VXaddr.get()].get())
+					{
+						V[0xF].set(0);
+					}
+					
+					else
+					{
+						V[0xF].set(1);
+					}
+					
+					V[VXaddr.get()].sub(V[VYaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0006:	// 0x8X?6: stores the least significant bit of VX in VF and then shifts VX to the right by 1
+				{
+					V[0xF].set(V[VXaddr.get()].get() & 0x01);
+					
+					V[VXaddr.get()].set(V[VXaddr.get()].get() >> 1);
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0007:	// 0x8XY7: sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't
+				{
+					if (V[VXaddr.get()].get() > V[VYaddr.get()].get())
+					{
+						V[0xF].set(0);
+					}
+					
+					else
+					{
+						V[0xF].set(1);
+					}
+					
+					V[VXaddr.get()].set(V[VYaddr.get()].get() - V[VXaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x000E:	// 0x8X?E: stores the most significant bit of VX in VF and then shifts VX to the left by 1
+				{
+					V[0xF].set((V[VXaddr.get()].get() & 0x80) >> 7);
+					
+					V[VXaddr.get()].set(V[VXaddr.get()].get() << 1);
+					
+					nextOp();
+					break;
 				}
 			}
+			break;
 		}
+		
+		case 0x9000:			// 0x9XY0: skips the next instruction if VX doesn't equal VY
+		{
+			if (V[VXaddr.get()].get() != V[VYaddr.get()].get())
+			{
+				nextOp();
+			}
+			
+			nextOp();
+			break;
+		}
+		
+		case 0xA000:			// 0xANNN: sets I to the address NNN
+		{
+			I.set(NNN.get());
+			
+			nextOp();
+			break;
+		}
+		
+		case 0xB000:			// 0xBNNN: jumps to the address NNN plus V0
+		{
+			pc = (short) (NNN.get() + V[0x0].get());
+			break;
+		}
+		
+		case 0xC000:			// 0xCXNN: sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+		{
+			Random rand = new Random();
+			
+			int rand_num = rand.nextInt() % 256;
+			
+			V[VXaddr.get()].set(rand_num & NN.get());
+			
+			nextOp();
+			break;
+		}
+		
+		case 0xD000:			// 0xDXYN: draws a sprite from memory[I] at (VX, VY) that has a width of 8 pixels and a height of N pixels. VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
+		{
+			V[0xF].set(0);
+			
+			for (int currLine = 0; currLine < N.get(); currLine++)
+			{
+				for (int currPixel = 0; currPixel < 8; currPixel++)
+				{
+					if ((memory[I.get() + currLine].get() & (0x80 >> currPixel)) != 0)
+					{
+						boolean collision = setPixel(V[VXaddr.get()].get() + currPixel, V[VYaddr.get()].get() + currLine);		// remember, this returns true if no collision
+						
+						if (!collision)
+						{
+							V[0xF].set(1);
+						}
+					}
+				}
+			}
+			drawFlag = true;
+			
+			nextOp();
+			
+			try
+			{
+				Thread.sleep(3);
+			}
+			
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+			
+			setPixels();
+			break;
+		}
+		
+		case 0xE000:
+		{
+			switch (opcode & 0x00FF)
+			{
+				case 0x009E:	// 0xEX9E: skips the next instruction if the key stored in VX is pressed
+				{
+					if (input.key[V[VXaddr.get()].get()])
+					{
+						nextOp();
+					}
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x00A1:	// 0xEXA1: skips the next instruction if the key stored in VX isn't pressed
+				{
+					if (!input.key[V[VXaddr.get()].get()])
+					{
+						nextOp();
+					}
+					
+					nextOp();
+					break;
+				}
+			}
+			break;
+		}
+		
+		case 0xF000:
+		{
+			switch (opcode & 0x00FF)
+			{
+				case 0x0007:	// 0xFX07: sets VX to the value of the delay timer
+				{
+					V[VXaddr.get()].set(delay_timer);
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x000A:	// 0xFX0A: a key press is awaited, and then stored in VX
+				{
+					for (int i = 0; i < V.length; i++)
+					{
+						if (input.key[i])
+						{
+							V[VXaddr.get()].set(i);
+							
+							nextOp();
+						}
+					}
+					
+					break;
+				}
+				
+				case 0x0015:	// 0xFX15: sets the delay timer to VX
+				{
+					delay_timer.set(V[VXaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0018:	// 0xFX18: sets the sound timer to VX
+				{
+					sound_timer.set(V[VXaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x001E:	// 0xFX1E: adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't
+				{
+					if ((I.get() + V[VXaddr.get()].get()) > 0x0FFF)
+					{
+						V[0xF].set(1);
+					}
+					
+					else
+					{
+						V[0xF].set(0);
+					}
+					
+					I.add(V[VXaddr.get()].get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0029:	// 0xFX29: sets I to the location of the sprite for the character in VX
+				{
+					I.set(V[VXaddr.get()].get() * 0x5);
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0033:	// 0xFX33: stores the binary-coded decimal representation of VX in memory[I]
+				{
+					UnsignedByte l_digit = new UnsignedByte(V[VXaddr.get()].get() / 100);
+					UnsignedByte m_digit = new UnsignedByte((V[VXaddr.get()].get() / 10) % 10);
+					UnsignedByte r_digit = new UnsignedByte((V[VXaddr.get()].get() % 100) % 10);
+					
+					memory[I.get()].set(l_digit.get());
+					memory[I.get() + 1].set(m_digit.get());
+					memory[I.get() + 2].set(r_digit.get());
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I. I itself is left unmodified
+				{
+					for (int i = 0; i <= VXaddr.get(); i++)
+					{
+						memory[I.get() + i].set(V[i]);
+					}
+					
+					nextOp();
+					break;
+				}
+				
+				case 0x0065:	// 0xFX65: fills V0 to VX (including VX) with values from memory starting at address I. I itself is left unmodified
+				{
+					for (int i = 0; i <= VXaddr.get(); i++)
+					{
+						V[i].set(memory[I.get() + i].get());
+					}
+					
+					nextOp();
+					break;
+				}
+			}
+			break;
+		}
+	}
 		// ahh, end the madness
 		
 		// Update timers

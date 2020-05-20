@@ -62,9 +62,23 @@ class Bitmap
 	
 	boolean setPixel(int x, int y)
 	{
-		gfx[x + (w * y)] ^= true;
+		int location = x + (w * y);
+		if (location > 2047 || location < 0)
+		{
+			System.out.println("bad location: program tried to draw at location " + x + ", " + y);
+			return true;
+		}
 		
-		return gfx[x + (w * y)];			// returns true if no collision
+		gfx[location] ^= true;
+		
+		return gfx[location];			// returns true if no collision
+	}
+	
+	void setPixel(int x, int y, boolean color)
+	{
+		int location = x + (w * y);
+		
+		gfx[location] = color;
 	}
 	
 	public void setPixels()
