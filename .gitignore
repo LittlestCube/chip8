@@ -1,4 +1,5 @@
 *.class
+*.jar
 *.DS_Store*
 *.ch8
 littlecube/

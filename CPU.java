@@ -106,7 +106,7 @@ class CPU
 		}
 	}
 	
-	void cycle()
+	void cycle() throws Exception
 	{
 		// todo: convert $opcode to UnsignedShort (maybe)
 		
@@ -390,15 +390,7 @@ class CPU
 			
 			nextOp();
 			
-			try
-			{
-				Thread.sleep(3);
-			}
-			
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
+			Thread.sleep(3);
 			
 			setPixels();
 			break;
@@ -547,6 +539,7 @@ class CPU
 		if (delay_timer.get() > 0)
 		{
 			delay_timer.sub(1);
+			Thread.sleep(10);
 		}
 			
 		if (sound_timer.get() > 0)

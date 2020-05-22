@@ -1,6 +1,7 @@
 // yeah, yeah, this file is called Bitmap.java but it really handles all graphics
 
 import javax.swing.JFrame;
+import javax.swing.JMenuBar;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
@@ -62,23 +63,11 @@ class Bitmap
 	
 	boolean setPixel(int x, int y)
 	{
-		int location = x + (w * y);
-		if (location > 2047 || location < 0)
-		{
-			System.out.println("bad location: program tried to draw at location " + x + ", " + y);
-			return true;
-		}
+		int location = (x + (w * y)) % 2048;
 		
 		gfx[location] ^= true;
 		
 		return gfx[location];			// returns true if no collision
-	}
-	
-	void setPixel(int x, int y, boolean color)
-	{
-		int location = x + (w * y);
-		
-		gfx[location] = color;
 	}
 	
 	public void setPixels()
