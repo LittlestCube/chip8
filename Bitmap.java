@@ -1,23 +1,40 @@
 // yeah, yeah, this file is called Bitmap.java but it really handles all graphics
 
 import javax.swing.JFrame;
+import javax.swing.JFileChooser;
 import javax.swing.JMenuBar;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
 import javax.swing.ImageIcon;
+import javax.swing.SwingUtilities;
+
+import javax.swing.filechooser.*;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 import java.awt.Color;
 import java.awt.FlowLayout;
 
 import java.awt.image.BufferedImage;
 
-class Bitmap
+class Bitmap implements ActionListener
 {
-	JFrame frame = new JFrame();
+	JFrame frame;
+	JFrame debugFrame;
 	
-	JFrame debugFrame = new JFrame();
-	JTextArea debugDisplay = new JTextArea(30, 20);
+	JFileChooser fc;
+	String gamePath;
+	
+	JMenuBar bar;
+	JMenu file;
+	JMenuItem open;
+	JMenuItem exit;
+	
+	JTextArea debugDisplay;
 	
 	int w;
 	int h;
@@ -38,11 +55,31 @@ class Bitmap
 		h = 32;
 		scale = 16;
 		
+		frame = new JFrame();
+		debugFrame = new JFrame();
+		
+		fc = new JFileChooser();
+		gamePath = "";
+		
+		bar = new JMenuBar();
+		file = new JMenu("File");
+		open = new JMenuItem("Open ROM");
+		exit = new JMenuItem("Exit");
+		
+		debugDisplay = new JTextArea(30, 20);
+		
 		display = new BufferedImage(w * scale, h * scale, BufferedImage.TYPE_INT_RGB);
 		
 		item = new JLabel(new ImageIcon(display));
 		
 		frame.add(item);
+		frame.setJMenuBar(bar);
+		bar.add(file);
+		file.add(open);
+		file.addSeparator();
+		file.add(exit);
+		open.addActionListener(this);
+		exit.addActionListener(this);
 		frame.pack();
 		
 		frame.setResizable(false);
@@ -54,6 +91,27 @@ class Bitmap
 		BLACK = (byte) 0;
 		
 		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+	}
+	
+	public void actionPerformed(ActionEvent e)
+	{
+		Object src = e.getSource();
+		
+		if (src == open)
+		{
+			SwingUtilities.updateComponentTreeUI(fc);
+			fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+			int fci = fc.showOpenDialog(null);
+			
+			if (fci == JFileChooser.APPROVE_OPTION) {
+				gamePath = fc.getSelectedFile().getAbsolutePath();
+			}
+		}
+		
+		if (src == exit)
+		{
+			System.exit(0);
+		}
 	}
 	
 	void updateDisplay()

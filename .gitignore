@@ -1,5 +1,6 @@
 *.class
 *.jar
 *.DS_Store*
-*.ch8
+*ch8
 littlecube/
+keys/

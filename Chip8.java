@@ -7,7 +7,6 @@ public class Chip8
 		CPU cpu = new CPU();
 		
 		// check to see if user actually loaded game
-		
 		if (args.length > 0)
 		{
 			cpu.loadGame(args[0]);
@@ -21,11 +20,15 @@ public class Chip8
 		
 		while (true)
 		{
-			do {
-				
-			} while (cpu.input.stopCycle);
+			if (cpu.bitmap.gamePath != "")
+			{
+				cpu.loadGame(cpu.bitmap.gamePath);
+			}
 			
-			cpu.cycle();
+			if (!cpu.input.stopCycle)
+			{
+				cpu.cycle();
+			}
 			
 			if (cpu.drawFlag)
 			{
@@ -38,8 +41,6 @@ public class Chip8
 				
 				cpu.drawFlag = false;
 			}
-			
-			cpu.setKeys();
 			
 			Thread.sleep(1);
 			

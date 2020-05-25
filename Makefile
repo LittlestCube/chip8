@@ -5,7 +5,7 @@ dev:
 	javac *.java
 
 run:
-	java Chip8 "tetris.ch8"
+	java Chip8
 
 clean: cleansub
 	rm *.class || continue
