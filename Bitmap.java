@@ -6,6 +6,8 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JLabel;
+import javax.swing.JButton;
+import javax.swing.JTextField;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
 import javax.swing.ImageIcon;
@@ -21,7 +23,7 @@ import java.awt.FlowLayout;
 
 import java.awt.image.BufferedImage;
 
-class Bitmap implements ActionListener
+class Bitmap extends Chip8 implements ActionListener
 {
 	JFrame frame;
 	JFrame debugFrame;
@@ -33,6 +35,9 @@ class Bitmap implements ActionListener
 	JMenu file;
 	JMenuItem open;
 	JMenuItem exit;
+	JMenu netmenu;
+	JMenuItem netserver;
+	JMenuItem netclient;
 	
 	JTextArea debugDisplay;
 	
@@ -65,6 +70,9 @@ class Bitmap implements ActionListener
 		file = new JMenu("File");
 		open = new JMenuItem("Open ROM");
 		exit = new JMenuItem("Exit");
+		netmenu = new JMenu("Netlink");
+		netserver = new JMenuItem("Start Server");
+		netclient = new JMenuItem("Connect to Server");
 		
 		debugDisplay = new JTextArea(30, 20);
 		
@@ -80,6 +88,11 @@ class Bitmap implements ActionListener
 		file.add(exit);
 		open.addActionListener(this);
 		exit.addActionListener(this);
+		bar.add(netmenu);
+		netmenu.add(netserver);
+		netmenu.add(netclient);
+		netserver.addActionListener(this);
+		netclient.addActionListener(this);
 		frame.pack();
 		
 		frame.setResizable(false);
@@ -91,6 +104,13 @@ class Bitmap implements ActionListener
 		BLACK = (byte) 0;
 		
 		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+	}
+	
+	void netlinkWindow()
+	{
+		JFrame NetFrame = new JFrame("Please input address...");
+		JTextField address = new JTextField();
+		JButton ok = new JButton("OK");
 	}
 	
 	public void actionPerformed(ActionEvent e)

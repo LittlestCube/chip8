@@ -1,6 +1,6 @@
 import javax.sound.sampled.*;
 
-public class Sound
+public class Sound extends Chip8
 {
 	static AudioFormat af;
 	

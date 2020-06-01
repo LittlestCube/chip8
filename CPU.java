@@ -10,7 +10,7 @@ import java.util.Random;
 
 import littlecube.unsigned.*;
 
-class CPU
+class CPU extends Chip8
 {
 	UnsignedByte[] memory;
 	
@@ -486,7 +486,14 @@ class CPU
 					
 					case 0x0018:	// 0xFX18: sets the sound timer to VX
 					{
-						sound_timer.set(V[VXaddr.get()].get());
+						int newSound = V[VXaddr.get()].get();
+						
+						sound_timer.set(newSound);
+						
+						if (netlink.connected == 1)
+						{
+							netlink.soundValue = newSound;
+						}
 						
 						nextOp();
 						break;
