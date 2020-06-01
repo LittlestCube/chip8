@@ -60,8 +60,8 @@ class Bitmap extends Chip8 implements ActionListener
 		h = 32;
 		scale = 16;
 		
-		frame = new JFrame();
-		debugFrame = new JFrame();
+		frame = new JFrame("Chip 8");
+		debugFrame = new JFrame("Debugger");
 		
 		fc = new JFileChooser();
 		gamePath = "";
@@ -180,7 +180,6 @@ class Bitmap extends Chip8 implements ActionListener
 	{
 		debugFrame.add(debugDisplay);
 		debugFrame.pack();
-		debugFrame.setTitle("Debugger");
 	}
 	
 	void debugRender()

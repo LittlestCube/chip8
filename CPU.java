@@ -253,7 +253,7 @@ class CPU extends Chip8
 						break;
 					}
 					
-					case 0x0001:	// 0x8XY0: sets VX to VX | VY
+					case 0x0001:	// 0x8XY1: sets VX to VX | VY
 					{
 						V[VXaddr.get()].or(V[VYaddr.get()].get());
 						
