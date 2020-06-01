@@ -391,7 +391,7 @@ class CPU extends Chip8
 				break;
 			}
 			
-			case 0xD000:			// 0xDXYN: draws a sprite from memory[I] at (VX, VY) that has a width of 8 pixels and a height of N pixels. VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
+			case 0xD000:			// 0xDXYN: draws a sprite from memory[I] at (VX, VY) that has a width of 8 pixels and a height of N pixels. VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn't happen
 			{
 				V[0xF].set(0);
 				
