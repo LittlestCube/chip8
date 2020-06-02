@@ -9,7 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.EOFException;
 
-public class Netlink extends Thread
+public class Netlink extends Chip8
 {
 	ServerSocket server;
 	Socket connectedClient;
@@ -31,64 +31,77 @@ public class Netlink extends Thread
 	
 	int soundValue = -1;
 	
-	boolean[] gfx;
+	boolean[] gfx = null;
 	
-	public void run()
+	public void runSocket()
 	{
-		if (server != null)
+		Thread thread = new Thread()
 		{
-			while (connectedClient == null)
+			public void run()
 			{
-				connectAsServer();
-			}
-			
-			while (connectedClient != null)
-			{
-				try
+				System.out.println("we're here");
+				
+				if (connected == 1)
 				{
-					try
+					System.out.println("we're here as well");
+					
+					while (connectedClient == null)
 					{
-						objectReceived = ois.readObject();
+						System.out.println("we're here too");
+						connectAsServer();
 					}
 					
-					catch (EOFException e)
+					while (connectedClient != null)
 					{
-						System.out.println("Client disconnected! Cleaning up...");
-						ois.close();
-						oos.close();
+						try
+						{
+							try
+							{
+								objectReceived = ois.readObject();
+							}
+							
+							catch (EOFException e)
+							{
+								System.out.println("Client disconnected! Cleaning up...");
+								ois.close();
+								oos.close();
+								
+								connected = 0;
+							}
+							process(objectReceived);
+							checkIfShouldSend();
+						}
 						
-						connected = 0;
+						catch (Exception e)
+						{
+							System.err.println("E: Couldn't read Object...\n\n");
+							e.printStackTrace();
+						}
 					}
-					process(objectReceived);
-					checkIfShouldSend();
 				}
 				
-				catch (Exception e)
+				else if (connected == 2)
 				{
-					System.err.println("E: Couldn't read Object...\n\n");
-					e.printStackTrace();
+					connectAsClient();
+					
+					while (client != null)
+					{
+						try
+						{
+							process(ois.readObject());
+						}
+						
+						catch (Exception e)
+						{
+							System.err.println("E: Couldn't read Object...\n\n");
+							e.printStackTrace();
+						}
+					}
 				}
 			}
-		}
+		};
 		
-		else if (client != null)
-		{
-			connectAsClient();
-			
-			while (client != null)
-			{
-				try
-				{
-					process(ois.readObject());
-				}
-				
-				catch (Exception e)
-				{
-					System.err.println("E: Couldn't read Object...\n\n");
-					e.printStackTrace();
-				}
-			}
-		}
+		thread.start();
 	}
 	
 	public void initAsServer()
@@ -103,7 +116,7 @@ public class Netlink extends Thread
 			
 			connected = 1;
 			
-			this.start();
+			runSocket();
 		}
 		
 		catch (Exception e)
@@ -125,7 +138,7 @@ public class Netlink extends Thread
 			
 			connected = 2;
 			
-			this.start();
+			runSocket();
 		}
 		
 		catch (Exception e)
@@ -202,7 +215,7 @@ public class Netlink extends Thread
 				
 				else
 				{
-					System.out.println(input);
+					System.out.println(inputString);
 				}
 			}
 			
