@@ -1,6 +1,8 @@
 // yeah, yeah, this file is called Bitmap.java but it really handles all graphics
 
 import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JOptionPane;
 import javax.swing.JFileChooser;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
@@ -15,11 +17,12 @@ import javax.swing.SwingUtilities;
 
 import javax.swing.filechooser.*;
 
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-
 import java.awt.Color;
 import java.awt.FlowLayout;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.WindowEvent;
 
 import java.awt.image.BufferedImage;
 
@@ -27,6 +30,11 @@ class Bitmap extends Chip8 implements ActionListener
 {
 	JFrame frame;
 	JFrame debugFrame;
+	
+	JFrame netFrame;
+	JTextField address;
+	JButton ok;
+	int netlinkPromptStatus;
 	
 	JFileChooser fc;
 	String gamePath;
@@ -70,9 +78,11 @@ class Bitmap extends Chip8 implements ActionListener
 		file = new JMenu("File");
 		open = new JMenuItem("Open ROM");
 		exit = new JMenuItem("Exit");
+		
 		netmenu = new JMenu("Netlink");
 		netserver = new JMenuItem("Start Server");
 		netclient = new JMenuItem("Connect to Server");
+		netlinkPromptStatus = 0;
 		
 		debugDisplay = new JTextArea(30, 20);
 		
@@ -108,9 +118,47 @@ class Bitmap extends Chip8 implements ActionListener
 	
 	void netlinkWindow()
 	{
-		JFrame NetFrame = new JFrame("Please input address...");
-		JTextField address = new JTextField();
-		JButton ok = new JButton("OK");
+		JPanel panel = new JPanel();
+		
+		address = new javax.swing.JTextField();
+		ok = new javax.swing.JButton();
+		
+		address.setText("127.0.0.1");
+		address.setPreferredSize(new java.awt.Dimension(82, 26));
+		address.setSize(new java.awt.Dimension(82, 26));
+		address.addActionListener(this);
+		ok.addActionListener(this);
+		
+		ok.setText("OK");
+		
+		javax.swing.GroupLayout layout = new javax.swing.GroupLayout(panel);
+		panel.setLayout(layout);
+		layout.setHorizontalGroup(
+			layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+			.addGroup(layout.createSequentialGroup()
+				.addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+					.addGroup(layout.createSequentialGroup()
+						.addGap(53, 53, 53)
+						.addComponent(address, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE))
+					.addGroup(layout.createSequentialGroup()
+						.addGap(72, 72, 72)
+						.addComponent(ok)))
+				.addContainerGap(53, Short.MAX_VALUE))
+		);
+		layout.setVerticalGroup(
+			layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+			.addGroup(layout.createSequentialGroup()
+				.addContainerGap()
+				.addComponent(address, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+				.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 13, Short.MAX_VALUE)
+				.addComponent(ok)
+				.addContainerGap())
+		);
+		
+		netFrame = new JFrame();
+		netFrame.add(panel);
+		netFrame.pack();
+		netFrame.setVisible(true);
 	}
 	
 	public void actionPerformed(ActionEvent e)
@@ -131,6 +179,24 @@ class Bitmap extends Chip8 implements ActionListener
 		if (src == exit)
 		{
 			System.exit(0);
+		}
+		
+		if (src == netserver)
+		{
+			netlink.initAsServer();
+			JOptionPane.showMessageDialog(frame, "Successfully started Netlink Server!");
+		}
+		
+		if (src == netclient)
+		{
+			netlinkWindow();
+		}
+		
+		if (src == ok)
+		{
+			netlink.initAsClient(address.getText());
+			
+			netFrame.dispatchEvent(new WindowEvent(netFrame, WindowEvent.WINDOW_CLOSING));
 		}
 	}
 	
