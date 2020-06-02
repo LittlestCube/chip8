@@ -9,99 +9,126 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.EOFException;
 
-public class Netlink extends Chip8
+public class Netlink extends Thread
 {
-	ServerSocket server;
-	Socket connectedClient;
+	static int connected = 0;			// 0 for no connection, 1 for we're the server, 2 for we're the client
+	public static final int SERVER = 1;
+	public static final int CLIENT = 2;
 	
-	Socket client;
-	String addressToConnect = "";
-	
-	int connected = 0;			// 0 for no connection, 1 for we're the server, 2 for we're the client
-	
-	ObjectInputStream ois;
-	ObjectOutputStream oos;
-	
-	Object objectReceived;
+	String host;
 	
 	final int PORT = 6969;
 	
-	int trueKeyValue = -1;
-	int falseKeyValue = -1;
+	static ObjectInputStream ois;
+	static ObjectOutputStream oos;
 	
-	int soundValue = -1;
+	boolean clientKeepRunning = false;
 	
-	boolean[] gfx = null;
+	int sendTrueKeyValue = -1;
+	int sendFalseKeyValue = -1;
+	int sendSoundValue = -1;
+	boolean[] sendGfx = null;
 	
-	public void runSocket()
+	int receiveTrueKeyValue = -1;
+	int receiveFalseKeyValue = -1;
+	int receiveSoundValue = -1;
+	boolean[] receiveGfx = null;
+	
+	public void run()
 	{
-		Thread thread = new Thread()
+		ServerSocket server;
+		Socket connectedClient = null;
+		
+		Socket client = null;
+		
+		Object objectReceived;
+		
+		if (connected == SERVER)
 		{
-			public void run()
+			try
 			{
-				System.out.println("we're here");
+				server = new ServerSocket(PORT);
 				
-				if (connected == 1)
+				connectedClient = server.accept();
+				
+				oos = new ObjectOutputStream(connectedClient.getOutputStream());
+				ois = new ObjectInputStream(connectedClient.getInputStream());
+			}
+			
+			catch (Exception e)
+			{
+				System.err.println("E: Couldn't connect to client...\n\n");
+				e.printStackTrace();
+			}
+			
+			System.out.println("Client found! Beginning process...");
+			
+			while (true)
+			{
+				try
 				{
-					System.out.println("we're here as well");
+					checkIfShouldSend();
 					
-					while (connectedClient == null)
+					try
 					{
-						System.out.println("we're here too");
-						connectAsServer();
+						objectReceived = ois.readObject();
 					}
 					
-					while (connectedClient != null)
+					catch (EOFException e)
 					{
-						try
-						{
-							try
-							{
-								objectReceived = ois.readObject();
-							}
-							
-							catch (EOFException e)
-							{
-								System.out.println("Client disconnected! Cleaning up...");
-								ois.close();
-								oos.close();
-								
-								connected = 0;
-							}
-							process(objectReceived);
-							checkIfShouldSend();
-						}
+						System.out.println("Client disconnected! Cleaning up...");
+						ois.close();
+						oos.close();
 						
-						catch (Exception e)
-						{
-							System.err.println("E: Couldn't read Object...\n\n");
-							e.printStackTrace();
-						}
+						connected = 0;
+						System.out.println("Done!");
+						break;
 					}
+					
+					process(objectReceived);
 				}
 				
-				else if (connected == 2)
+				catch (Exception e)
 				{
-					connectAsClient();
-					
-					while (client != null)
-					{
-						try
-						{
-							process(ois.readObject());
-						}
-						
-						catch (Exception e)
-						{
-							System.err.println("E: Couldn't read Object...\n\n");
-							e.printStackTrace();
-						}
-					}
+					System.err.println("E: Couldn't read Object...\n\n");
+					e.printStackTrace();
 				}
 			}
-		};
+		}
 		
-		thread.start();
+		else if (connected == CLIENT)
+		{
+			try
+			{
+				client = new Socket(host, PORT);
+				
+				oos = new ObjectOutputStream(client.getOutputStream());
+				ois = new ObjectInputStream(client.getInputStream());
+			}
+			
+			catch (Exception e)
+			{
+				System.err.println("E: Couldn't connect to server...\n\n");
+				e.printStackTrace();
+			}
+			
+			while (true)
+			{
+				System.out.println("asdf");
+				
+				try
+				{
+					this.checkIfShouldSend();
+					this.process(ois.readObject());
+				}
+				
+				catch (Exception e)
+				{
+					System.err.println("E: Couldn't read Object...\n\n");
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 	
 	public void initAsServer()
@@ -110,13 +137,11 @@ public class Netlink extends Chip8
 		{
 			System.out.println("I: Cool! We're the server.");
 			
-			server = new ServerSocket(PORT);
-			
 			System.out.println("I: Success! Server initialized at port " + PORT + ".");
 			
-			connected = 1;
+			connected = SERVER;
 			
-			runSocket();
+			this.start();
 		}
 		
 		catch (Exception e)
@@ -132,13 +157,13 @@ public class Netlink extends Chip8
 		{
 			System.out.println("I: Cool! We're the client.");
 			
-			client = new Socket(hostname, PORT);
-			
 			System.out.println("I: Success! Client initialized at port " + PORT + ".");
 			
-			connected = 2;
+			host = hostname;
+			connected = CLIENT;
+			clientKeepRunning = true;
 			
-			runSocket();
+			this.start();
 		}
 		
 		catch (Exception e)
@@ -148,47 +173,19 @@ public class Netlink extends Chip8
 		}
 	}
 	
-	void connectAsServer()
-	{
-		try
-		{
-			connectedClient = server.accept();
-			ois = new ObjectInputStream(connectedClient.getInputStream());
-			oos = new ObjectOutputStream(connectedClient.getOutputStream());
-		}
-		
-		catch (Exception e)
-		{
-			System.err.println("E: Couldn't connect to client...\n\n");
-			e.printStackTrace();
-		}
-	}
-	
-	void connectAsClient()
-	{
-		try
-		{
-			client = new Socket(addressToConnect, PORT);
-			ois = new ObjectInputStream(client.getInputStream());
-			oos = new ObjectOutputStream(client.getOutputStream());
-		}
-		
-		catch (Exception e)
-		{
-			System.err.println("E: Couldn't connect to server...\n\n");
-			e.printStackTrace();
-		}
-	}
-	
-	void sendObject(Object output) throws Exception
+	public void sendObject(Object output) throws Exception
 	{
 		oos.writeObject(output);
 	}
 	
-	void process(Object input)
+	public void process(Object input)
 	{
+		System.out.println("bleh " + input);
+		
 		try
 		{
+			System.out.println(input);
+			
 			if (input == null)
 			{
 				return;
@@ -200,17 +197,17 @@ public class Netlink extends Chip8
 				
 				if (inputString.startsWith("KT:"))
 				{
-					trueKeyValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
+					receiveTrueKeyValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
 				}
 				
 				else if (inputString.startsWith("KF:"))
 				{
-					falseKeyValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
+					receiveFalseKeyValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
 				}
 				
 				else if (inputString.startsWith("S:"))
 				{
-					soundValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
+					receiveSoundValue = Integer.parseInt(inputString.substring(inputString.indexOf(':') + 2, inputString.length()));
 				}
 				
 				else
@@ -221,7 +218,7 @@ public class Netlink extends Chip8
 			
 			if (input instanceof boolean[])
 			{
-				gfx = (boolean[]) input;
+				receiveGfx = (boolean[]) input;
 			}
 		}
 		
@@ -231,30 +228,52 @@ public class Netlink extends Chip8
 		}
 	}
 	
-	void checkIfShouldSend()
+	public void checkIfShouldSend()
 	{
+		System.out.println("asdf here too");
+		
+		Object output = null;
+		
+		System.out.println("maybe one more over here");
+		
 		try
 		{
-			if (trueKeyValue != -1)
+			if (sendTrueKeyValue != -1)
 			{
-				sendObject(new String("KT: " + trueKeyValue));
-				trueKeyValue = -1;
+				output = new String("KT: " + sendTrueKeyValue);
+				sendObject(output);
+				
+				sendTrueKeyValue = -1;
 			}
-			if (falseKeyValue != -1)
+			
+			if (sendFalseKeyValue != -1)
 			{
-				sendObject(new String("KF: " + falseKeyValue));
-				falseKeyValue = -1;
+				output = new String("KF: " + sendFalseKeyValue);
+				sendObject(output);
+				
+				sendFalseKeyValue = -1;
 			}
-			if (soundValue != -1)
+			
+			if (connected == SERVER)
 			{
-				sendObject(new String("KT: " + soundValue));
-				soundValue = -1;
+				if (sendSoundValue != -1)
+				{
+					output = new String("KT: " + sendSoundValue);
+					sendObject(output);
+					
+					sendSoundValue = -1;
+				}
+				
+				if (sendGfx != null)
+				{
+					output = sendGfx;
+					sendObject(output);
+					
+					sendGfx = null;
+				}
 			}
-			if (gfx != null)
-			{
-				sendObject(gfx);
-				gfx = null;
-			}
+			
+			System.out.println(output);
 		}
 		
 		catch (Exception e)

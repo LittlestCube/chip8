@@ -322,17 +322,17 @@ class Input extends Chip8 implements KeyListener
 	
 	void netKeyTrue(int keyIndex)
 	{
-		if (netlink.connected == 2)
+		if (netlink.connected != 0)
 		{
-			netlink.trueKeyValue = keyIndex;
+			netlink.sendTrueKeyValue = keyIndex;
 		}
 	}
 	
 	void netKeyFalse(int keyIndex)
 	{
-		if (netlink.connected == 2)
+		if (netlink.connected != 0)
 		{
-			netlink.falseKeyValue = keyIndex;
+			netlink.sendFalseKeyValue = keyIndex;
 		}
 	}
 	

@@ -42,6 +42,7 @@ class Bitmap extends Chip8 implements ActionListener
 	JMenuBar bar;
 	JMenu file;
 	JMenuItem open;
+	JMenuItem stop;
 	JMenuItem exit;
 	JMenu netmenu;
 	JMenuItem netserver;
@@ -77,6 +78,7 @@ class Bitmap extends Chip8 implements ActionListener
 		bar = new JMenuBar();
 		file = new JMenu("File");
 		open = new JMenuItem("Open ROM");
+		stop = new JMenuItem("Stop Emulation");
 		exit = new JMenuItem("Exit");
 		
 		netmenu = new JMenu("Netlink");
@@ -123,7 +125,7 @@ class Bitmap extends Chip8 implements ActionListener
 		address = new javax.swing.JTextField();
 		ok = new javax.swing.JButton();
 		
-		address.setText("127.0.0.1");
+		address.setText("localhost");
 		address.setPreferredSize(new java.awt.Dimension(82, 26));
 		address.setSize(new java.awt.Dimension(82, 26));
 		address.addActionListener(this);

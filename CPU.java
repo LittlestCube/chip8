@@ -490,9 +490,9 @@ class CPU extends Chip8
 						
 						sound_timer.set(newSound);
 						
-						if (netlink.connected == 1)
+						if (netlink.connected == Netlink.SERVER)
 						{
-							netlink.soundValue = newSound;
+							netlink.sendSoundValue = newSound;
 						}
 						
 						nextOp();

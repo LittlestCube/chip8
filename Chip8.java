@@ -10,73 +10,102 @@ public class Chip8
 		cpu = new CPU();
 		netlink = new Netlink();
 		
-		if (netlink.connected == 0)
+		while (true)
 		{
-			// check to see if user actually loaded game
-			if (args.length > 0)
+			if (netlink.connected != Netlink.CLIENT)
 			{
-				cpu.loadGame(args[0]);
-			}
-			
-			if (debug)
-			{
-				cpu.bitmap.debugWindow();
-				cpu.bitmap.debugFrame.setVisible(true);
-			}
-			
-			while (true)
-			{
-				if (cpu.bitmap.gamePath != "")
+				// check to see if user actually loaded game
+				if (args.length > 0)
 				{
-					cpu.loadGame(cpu.bitmap.gamePath);
+					cpu.loadGame(args[0]);
 				}
-				
-				if (!cpu.input.stopCycle)
-				{
-					cpu.cycle();
-				}
-				
-				if (cpu.drawFlag)
-				{
-					cpu.setPixels();
-					
-					if (debug)
-					{
-						cpu.bitmap.debugRender();
-					}
-					
-					if (netlink.connected == 1)
-					{
-						netlink.gfx = cpu.bitmap.gfx;
-					}
-					
-					cpu.drawFlag = false;
-				}
-				
-				Thread.sleep(1);
 				
 				if (debug)
 				{
-					String debugString = "";
-					
-					for (int i = 0; i < cpu.V.length; i++)
+					cpu.bitmap.debugWindow();
+					cpu.bitmap.debugFrame.setVisible(true);
+				}
+				
+				while (true)
+				{
+					if (cpu.bitmap.gamePath != "")
 					{
-						debugString += "V" + i + ":\t  0x" + Integer.toHexString(cpu.V[i].get()) + "\n";
+						cpu.loadGame(cpu.bitmap.gamePath);
 					}
 					
-					debugString += "current opcode: 0x" + Integer.toHexString(cpu.opcode) + "\n" + "pc: 0x" + Integer.toHexString(cpu.pc) + "\n" + "stack[sp]: 0x" + Integer.toHexString(cpu.stack[cpu.sp].get()) + "\n" + "sp: 0x" + Integer.toHexString(cpu.sp) + "\n";
-					debugString += "I: 0x" + Integer.toHexString(cpu.I.get()) + "\n" + "delay_timer: 0x" + Integer.toHexString(cpu.delay_timer.get()) + "\n" + "sound_timer: 0x" + Integer.toHexString(cpu.sound_timer.get()) + "\n";
+					if (!cpu.input.stopCycle)
+					{
+						cpu.cycle();
+					}
 					
-					cpu.bitmap.debugDisplay.setText(debugString);
+					if (cpu.drawFlag)
+					{
+						cpu.setPixels();
+						
+						if (debug)
+						{
+							cpu.bitmap.debugRender();
+						}
+						
+						if (netlink.connected == Netlink.SERVER)
+						{
+							netlink.sendGfx = cpu.bitmap.gfx;
+						}
+						
+						cpu.drawFlag = false;
+					}
+					
+					Thread.sleep(1);
+					
+					if (debug)
+					{
+						String debugString = "";
+						
+						for (int i = 0; i < cpu.V.length; i++)
+						{
+							debugString += "V" + i + ":\t  0x" + Integer.toHexString(cpu.V[i].get()) + "\n";
+						}
+						
+						debugString += "current opcode: 0x" + Integer.toHexString(cpu.opcode) + "\n" + "pc: 0x" + Integer.toHexString(cpu.pc) + "\n" + "stack[sp]: 0x" + Integer.toHexString(cpu.stack[cpu.sp].get()) + "\n" + "sp: 0x" + Integer.toHexString(cpu.sp) + "\n";
+						debugString += "I: 0x" + Integer.toHexString(cpu.I.get()) + "\n" + "delay_timer: 0x" + Integer.toHexString(cpu.delay_timer.get()) + "\n" + "sound_timer: 0x" + Integer.toHexString(cpu.sound_timer.get()) + "\n";
+						
+						cpu.bitmap.debugDisplay.setText(debugString);
+					}
 				}
 			}
-		}
-		
-		else if (netlink.connected == 2)
-		{
-			while (true)
+			
+			else
 			{
-				
+				while (true)
+				{
+					if (netlink.receiveTrueKeyValue != -1)
+					{
+						cpu.input.key[netlink.receiveTrueKeyValue] = true;
+						
+						netlink.receiveTrueKeyValue = -1;
+					}
+					
+					if (netlink.receiveFalseKeyValue != -1)
+					{
+						cpu.input.key[netlink.receiveFalseKeyValue] = false;
+						
+						netlink.receiveFalseKeyValue = -1;
+					}
+					
+					if (netlink.receiveSoundValue != -1)
+					{
+						cpu.sound_timer.set(netlink.receiveSoundValue);
+						
+						netlink.receiveSoundValue = -1;
+					}
+					
+					if (netlink.receiveGfx != null)
+					{
+						cpu.bitmap.gfx = netlink.receiveGfx;
+						cpu.setPixels();
+						netlink.receiveGfx = null;
+					}
+				}
 			}
 		}
 	}
