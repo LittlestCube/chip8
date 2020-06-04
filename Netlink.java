@@ -19,26 +19,26 @@ public class Netlink extends Thread
 	
 	final int PORT = 6969;
 	
-	static ObjectInputStream ois;
-	static ObjectOutputStream oos;
+	ServerSocket server;
+	
+	ObjectInputStream ois;
+	ObjectOutputStream oos;
 	
 	boolean clientKeepRunning = false;
 	
-	int sendTrueKeyValue = -1;
-	int sendFalseKeyValue = -1;
-	int sendSoundValue = -1;
-	boolean[] sendGfx = null;
+	static int sendTrueKeyValue = -1;
+	static int sendFalseKeyValue = -1;
+	static int sendSoundValue = -1;
+	static boolean[] sendGfx = null;
 	
-	int receiveTrueKeyValue = -1;
-	int receiveFalseKeyValue = -1;
-	int receiveSoundValue = -1;
-	boolean[] receiveGfx = null;
+	static int receiveTrueKeyValue = -1;
+	static int receiveFalseKeyValue = -1;
+	static int receiveSoundValue = -1;
+	static boolean[] receiveGfx = null;
 	
 	public void run()
 	{
-		ServerSocket server;
 		Socket connectedClient = null;
-		
 		Socket client = null;
 		
 		Object objectReceived;
@@ -67,11 +67,11 @@ public class Netlink extends Thread
 			{
 				try
 				{
-					checkIfShouldSend();
+					while (!checkIfShouldSend()) {}
 					
 					try
 					{
-						objectReceived = ois.readObject();
+						System.out.println(objectReceived = ois.readObject());
 					}
 					
 					catch (EOFException e)
@@ -118,8 +118,9 @@ public class Netlink extends Thread
 				
 				try
 				{
-					this.checkIfShouldSend();
-					this.process(ois.readObject());
+					while (!checkIfShouldSend()) {}
+					
+					process(ois.readObject());
 				}
 				
 				catch (Exception e)
@@ -180,7 +181,8 @@ public class Netlink extends Thread
 	
 	public void process(Object input)
 	{
-		System.out.println("bleh " + input);
+		System.out.println("input: ");
+		System.out.println(input);
 		
 		try
 		{
@@ -219,6 +221,7 @@ public class Netlink extends Thread
 			if (input instanceof boolean[])
 			{
 				receiveGfx = (boolean[]) input;
+				System.out.println(input);
 			}
 		}
 		
@@ -228,13 +231,9 @@ public class Netlink extends Thread
 		}
 	}
 	
-	public void checkIfShouldSend()
+	public boolean checkIfShouldSend()
 	{
-		System.out.println("asdf here too");
-		
-		Object output = null;
-		
-		System.out.println("maybe one more over here");
+		Object output = new Object();
 		
 		try
 		{
@@ -244,6 +243,7 @@ public class Netlink extends Thread
 				sendObject(output);
 				
 				sendTrueKeyValue = -1;
+				return true;
 			}
 			
 			if (sendFalseKeyValue != -1)
@@ -252,16 +252,18 @@ public class Netlink extends Thread
 				sendObject(output);
 				
 				sendFalseKeyValue = -1;
+				return true;
 			}
 			
 			if (connected == SERVER)
 			{
 				if (sendSoundValue != -1)
 				{
-					output = new String("KT: " + sendSoundValue);
+					output = new String("S: " + sendSoundValue);
 					sendObject(output);
 					
 					sendSoundValue = -1;
+					return true;
 				}
 				
 				if (sendGfx != null)
@@ -270,15 +272,26 @@ public class Netlink extends Thread
 					sendObject(output);
 					
 					sendGfx = null;
+					return true;
 				}
 			}
-			
-			System.out.println(output);
 		}
 		
 		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
+		
+		return false;
+	}
+	
+	public void setGfx(boolean[] gfx)
+	{
+		sendGfx = gfx;
+	}
+	
+	public boolean[] getGfx()
+	{
+		return receiveGfx;
 	}
 }

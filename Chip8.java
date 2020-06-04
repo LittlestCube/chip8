@@ -25,52 +25,51 @@ public class Chip8
 					cpu.bitmap.debugWindow();
 					cpu.bitmap.debugFrame.setVisible(true);
 				}
-				
-				while (true)
+				if (cpu.bitmap.gamePath != "")
 				{
-					if (cpu.bitmap.gamePath != "")
-					{
-						cpu.loadGame(cpu.bitmap.gamePath);
-					}
-					
-					if (!cpu.input.stopCycle)
-					{
-						cpu.cycle();
-					}
-					
-					if (cpu.drawFlag)
-					{
-						cpu.setPixels();
-						
-						if (debug)
-						{
-							cpu.bitmap.debugRender();
-						}
-						
-						if (netlink.connected == Netlink.SERVER)
-						{
-							netlink.sendGfx = cpu.bitmap.gfx;
-						}
-						
-						cpu.drawFlag = false;
-					}
-					
-					Thread.sleep(1);
+					cpu.loadGame(cpu.bitmap.gamePath);
+				}
+				
+				if (!cpu.input.stopCycle)
+				{
+					cpu.cycle();
+				}
+				
+				if (cpu.drawFlag)
+				{
+					cpu.setPixels();
 					
 					if (debug)
 					{
-						String debugString = "";
-						
-						for (int i = 0; i < cpu.V.length; i++)
-						{
-							debugString += "V" + i + ":\t  0x" + Integer.toHexString(cpu.V[i].get()) + "\n";
-						}
-						
-						debugString += "current opcode: 0x" + Integer.toHexString(cpu.opcode) + "\n" + "pc: 0x" + Integer.toHexString(cpu.pc) + "\n" + "stack[sp]: 0x" + Integer.toHexString(cpu.stack[cpu.sp].get()) + "\n" + "sp: 0x" + Integer.toHexString(cpu.sp) + "\n";
-						debugString += "I: 0x" + Integer.toHexString(cpu.I.get()) + "\n" + "delay_timer: 0x" + Integer.toHexString(cpu.delay_timer.get()) + "\n" + "sound_timer: 0x" + Integer.toHexString(cpu.sound_timer.get()) + "\n";
-						
-						cpu.bitmap.debugDisplay.setText(debugString);
+						cpu.bitmap.debugRender();
 					}
+					
+					System.out.println(netlink.connected);
+					
+					if (netlink.connected == Netlink.SERVER)
+					{
+						System.out.println(netlink.connected);
+						netlink.setGfx(cpu.bitmap.gfx);
+					}
+					
+					cpu.drawFlag = false;
+				}
+				
+				Thread.sleep(1);
+				
+				if (debug)
+				{
+					String debugString = "";
+					
+					for (int i = 0; i < cpu.V.length; i++)
+					{
+						debugString += "V" + i + ":\t  0x" + Integer.toHexString(cpu.V[i].get()) + "\n";
+					}
+					
+					debugString += "current opcode: 0x" + Integer.toHexString(cpu.opcode) + "\n" + "pc: 0x" + Integer.toHexString(cpu.pc) + "\n" + "stack[sp]: 0x" + Integer.toHexString(cpu.stack[cpu.sp].get()) + "\n" + "sp: 0x" + Integer.toHexString(cpu.sp) + "\n";
+					debugString += "I: 0x" + Integer.toHexString(cpu.I.get()) + "\n" + "delay_timer: 0x" + Integer.toHexString(cpu.delay_timer.get()) + "\n" + "sound_timer: 0x" + Integer.toHexString(cpu.sound_timer.get()) + "\n";
+					
+					cpu.bitmap.debugDisplay.setText(debugString);
 				}
 			}
 			
@@ -101,9 +100,9 @@ public class Chip8
 					
 					if (netlink.receiveGfx != null)
 					{
-						cpu.bitmap.gfx = netlink.receiveGfx;
+						cpu.bitmap.gfx = netlink.getGfx();
 						cpu.setPixels();
-						netlink.receiveGfx = null;
+						netlink.setGfx(null);
 					}
 				}
 			}
