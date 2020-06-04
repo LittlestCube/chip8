@@ -129,6 +129,17 @@ class CPU extends Chip8
 		bitmap.gamePath = "";
 		
 		input.stopCycle = false;
+		
+		boolean hires = false;
+		
+		// check for hires mode
+		if (memory[0x200].get() == 0x12 && memory[0x201].get() == 0x60)
+		{
+			hires = true;
+			pc = 0x2C0;
+		}
+		
+		bitmap.initDisplay(hires);
 	}
 	
 	void cycle() throws Exception
@@ -155,7 +166,7 @@ class CPU extends Chip8
 		{
 			case 0x0000:
 			{
-				switch (opcode & 0x00FF)
+				switch (opcode & 0x0FFF)
 				{
 					case 0x00E0:	// 0x00E0: clears the screen
 					{
@@ -170,6 +181,16 @@ class CPU extends Chip8
 						--sp;
 						pc = (short) stack[sp].get();
 						stack[sp].set(0);
+						
+						nextOp();
+						break;
+					}
+					
+					case 0x0230:	// 0x0230: clears the screen (hires)
+					{
+						System.out.println("bleh");
+						
+						clearDisplay();
 						
 						nextOp();
 						break;
@@ -599,10 +620,8 @@ class CPU extends Chip8
 	
 	void clearDisplay()
 	{
-		for (int i = 0; i < bitmap.gfx.length; i++)
-		{
-			bitmap.gfx[i] = false;
-		}
+		bitmap.clearDisplay();
+		
 		drawFlag = true;
 	}
 }

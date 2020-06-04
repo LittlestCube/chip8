@@ -54,7 +54,11 @@ class Bitmap extends Chip8 implements ActionListener
 	int h;
 	int scale;
 	
+	final int TRUE_SCALE = 16;
+	
 	boolean[] gfx;
+	
+	boolean hires;
 	
 	JLabel item;
 	
@@ -65,9 +69,8 @@ class Bitmap extends Chip8 implements ActionListener
 	
 	Bitmap()
 	{
-		w = 64;
-		h = 32;
-		scale = 16;
+		WHITE = (byte) 255;
+		BLACK = (byte) 0;
 		
 		frame = new JFrame("Chip 8");
 		debugFrame = new JFrame("Debugger");
@@ -88,11 +91,6 @@ class Bitmap extends Chip8 implements ActionListener
 		
 		debugDisplay = new JTextArea(30, 20);
 		
-		display = new BufferedImage(w * scale, h * scale, BufferedImage.TYPE_INT_RGB);
-		
-		item = new JLabel(new ImageIcon(display));
-		
-		frame.add(item);
 		frame.setJMenuBar(bar);
 		bar.add(file);
 		file.add(open);
@@ -105,17 +103,53 @@ class Bitmap extends Chip8 implements ActionListener
 		netmenu.add(netclient);
 		netserver.addActionListener(this);
 		netclient.addActionListener(this);
-		frame.pack();
 		
 		frame.setResizable(false);
-		frame.setVisible(true);
-		
-		gfx = new boolean[64 * 32];
-		
-		WHITE = (byte) 255;
-		BLACK = (byte) 0;
 		
 		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		
+		initDisplay(false);
+	}
+	
+	void initDisplay(boolean setHires)
+	{
+		frame.setVisible(false);
+		try
+		{
+			frame.remove(item);
+		}
+		
+		catch (Exception e)
+		{
+			
+		}
+		
+		hires = setHires;
+		
+		w = 64;
+		
+		if (hires)
+		{
+			h = 64;
+			scale = TRUE_SCALE / 2;
+		}
+		
+		else
+		{
+			h = 32;
+			scale = TRUE_SCALE;
+		}
+		
+		display = new BufferedImage(w * scale, h * scale, BufferedImage.TYPE_INT_RGB);
+		
+		item = new JLabel(new ImageIcon(display));
+		
+		gfx = new boolean[w * h];
+		
+		frame.add(item);
+		frame.pack();
+		
+		frame.setVisible(true);
 	}
 	
 	void netlinkWindow()
@@ -209,7 +243,7 @@ class Bitmap extends Chip8 implements ActionListener
 	
 	boolean setPixel(int x, int y)
 	{
-		int location = (x + (w * y)) % 2048;
+		int location = (x + (w * y)) % (w * h);
 		
 		gfx[location] ^= true;
 		
@@ -241,6 +275,14 @@ class Bitmap extends Chip8 implements ActionListener
 					}
 				}
 			}
+		}
+	}
+	
+	void clearDisplay()
+	{
+		for (int i = 0; i < gfx.length; i++)
+		{
+			gfx[i] = false;
 		}
 	}
 	
