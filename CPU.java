@@ -109,8 +109,6 @@ class CPU extends Chip8
 	
 	void loadGame(String filename) throws IOException
 	{
-		
-		
 		input.stopCycle = true;
 		
 		currGame = bitmap.gamePath;
