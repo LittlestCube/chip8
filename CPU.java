@@ -1,12 +1,11 @@
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import java.io.IOException;
 
 import java.util.Random;
+
+import java.security.MessageDigest;
 
 import littlecube.unsigned.*;
 
@@ -17,6 +16,8 @@ class CPU extends Chip8
 	UnsignedByte[] V;
 	
 	UnsignedShort[] stack;
+	
+	boolean nonlegacy;
 	
 	boolean drawFlag;
 	
@@ -38,7 +39,7 @@ class CPU extends Chip8
 	
 	CPU() throws Exception
 	{
-		init();
+		
 	}
 	
 	void init()
@@ -51,6 +52,8 @@ class CPU extends Chip8
 		stack = new UnsignedShort[16];
 		V = new UnsignedByte[16];
 		memory = new UnsignedByte[4096];
+		
+		nonlegacy = false;
 		
 		drawFlag = false;
 		
@@ -120,6 +123,18 @@ class CPU extends Chip8
 		bitmap.updateDisplay();
 		
 		byte[] buffer = Files.readAllBytes(Paths.get(filename));
+		byte[] hash;
+		
+		try
+		{
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			hash = md.digest(buffer);
+		}
+		
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
 		
 		for (int i = 0; i < buffer.length; i++)
 		{
