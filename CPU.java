@@ -109,6 +109,8 @@ class CPU extends Chip8
 	
 	void loadGame(String filename) throws IOException
 	{
+		
+		
 		input.stopCycle = true;
 		
 		currGame = bitmap.gamePath;
@@ -318,14 +320,14 @@ class CPU extends Chip8
 					
 					case 0x0005:	// 0x8XY5: VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't
 					{
-						if (V[VYaddr.get()].get() > V[VXaddr.get()].get())
+						if (V[VXaddr.get()].get() > V[VYaddr.get()].get())
 						{
-							V[0xF].set(0);
+							V[0xF].set(1);
 						}
 						
 						else
 						{
-							V[0xF].set(1);
+							V[0xF].set(0);
 						}
 						
 						V[VXaddr.get()].sub(V[VYaddr.get()].get());
@@ -431,6 +433,7 @@ class CPU extends Chip8
 						}
 					}
 				}
+				
 				drawFlag = true;
 				
 				nextOp();
@@ -564,7 +567,7 @@ class CPU extends Chip8
 					{
 						for (int i = 0; i <= VXaddr.get(); i++)
 						{
-							memory[I.get() + i].set(V[i]);
+							memory[I.get() + i].set(V[i].get());
 						}
 						
 						nextOp();

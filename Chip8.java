@@ -1,6 +1,6 @@
 public class Chip8
 {
-	public static boolean debug = false;
+	public static boolean debug = true;
 	
 	static CPU cpu;
 	static Netlink netlink;
