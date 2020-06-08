@@ -16,15 +16,15 @@ public class Chip8
 			cpu.bitmap.debugFrame.setVisible(true);
 		}
 		
+		if (args.length > 0)
+		{
+			cpu.loadGame(args[0]);
+		}
+		
 		while (true)
 		{
 			if (netlink.connected != Netlink.CLIENT)
 			{
-				if (args.length > 0)
-				{
-					cpu.loadGame(args[0]);
-				}
-				
 				if (cpu.bitmap.gamePath != "")
 				{
 					cpu.loadGame(cpu.bitmap.gamePath);

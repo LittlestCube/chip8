@@ -18,6 +18,7 @@ class CPU extends Chip8
 	UnsignedShort[] stack;
 	
 	boolean nonlegacy;
+	final String ANIMALHASH = "46497c35ce549cd7617462fe7c9fc284";
 	
 	boolean drawFlag;
 	
@@ -39,7 +40,7 @@ class CPU extends Chip8
 	
 	CPU() throws Exception
 	{
-		
+		init();
 	}
 	
 	void init()
@@ -123,12 +124,23 @@ class CPU extends Chip8
 		bitmap.updateDisplay();
 		
 		byte[] buffer = Files.readAllBytes(Paths.get(filename));
-		byte[] hash;
 		
 		try
 		{
 			MessageDigest md = MessageDigest.getInstance("MD5");
-			hash = md.digest(buffer);
+			byte[] hash = md.digest(buffer);
+			
+			String loadedGameHash = "";
+			
+			for (int i = 0; i < hash.length; i++)
+			{
+				loadedGameHash += Integer.toHexString(hash[i] & 0xFF);
+			}
+			
+			if (loadedGameHash.equals(ANIMALHASH))
+			{
+				nonlegacy = true;
+			}
 		}
 		
 		catch (Exception e)
