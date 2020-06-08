@@ -243,7 +243,7 @@ class Bitmap extends Chip8 implements ActionListener
 	
 	boolean setPixel(int x, int y)
 	{
-		int location = (x + (w * y)) % (w * h);
+		int location = (x + (w * y));
 		
 		gfx[location] ^= true;
 		

@@ -363,9 +363,19 @@ class CPU extends Chip8
 					
 					case 0x0006:	// 0x8X?6: stores the least significant bit of VX in VF and then shifts VX to the right by 1
 					{
-						V[0xF].set(V[VXaddr.get()].get() & 0x01);
+						if (nonlegacy)
+						{
+							V[0xF].set(V[VYaddr.get()].get() & 0x01);
+							
+							V[VYaddr.get()].set(V[VYaddr.get()].get() >> 1);
+						}
 						
-						V[VXaddr.get()].set(V[VXaddr.get()].get() >> 1);
+						else
+						{
+							V[0xF].set(V[VXaddr.get()].get() & 0x01);
+							
+							V[VXaddr.get()].set(V[VXaddr.get()].get() >> 1);
+						}
 						
 						nextOp();
 						break;
@@ -391,9 +401,19 @@ class CPU extends Chip8
 					
 					case 0x000E:	// 0x8X?E: stores the most significant bit of VX in VF and then shifts VX to the left by 1
 					{
-						V[0xF].set((V[VXaddr.get()].get() & 0x80) >> 7);
+						if (nonlegacy)
+						{
+							V[0xF].set((V[VYaddr.get()].get() & 0x80) >> 7);
+							
+							V[VYaddr.get()].set(V[VYaddr.get()].get() << 1);
+						}
 						
-						V[VXaddr.get()].set(V[VXaddr.get()].get() << 1);
+						else
+						{
+							V[0xF].set((V[VXaddr.get()].get() & 0x80) >> 7);
+							
+							V[VXaddr.get()].set(V[VXaddr.get()].get() << 1);
+						}
 						
 						nextOp();
 						break;
@@ -443,13 +463,16 @@ class CPU extends Chip8
 			{
 				V[0xF].set(0);
 				
+				int x = V[VXaddr.get()].get() % bitmap.w;
+				int y = V[VYaddr.get()].get() % bitmap.h;
+				
 				for (int currLine = 0; currLine < N.get(); currLine++)
 				{
 					for (int currPixel = 0; currPixel < 8; currPixel++)
 					{
-						if ((memory[I.get() + currLine].get() & (0x80 >> currPixel)) != 0)
+						if (((memory[I.get() + currLine].get() & (0x80 >> currPixel)) != 0) && (x + currPixel < bitmap.w) && (y + currLine < bitmap.h))
 						{
-							boolean collision = setPixel(V[VXaddr.get()].get() + currPixel, V[VYaddr.get()].get() + currLine);		// remember, this returns true if no collision
+							boolean collision = setPixel(x + currPixel, y + currLine);		// remember, this returns true if no collision
 							
 							if (!collision)
 							{
@@ -462,10 +485,6 @@ class CPU extends Chip8
 				drawFlag = true;
 				
 				nextOp();
-				
-				Thread.sleep(3);
-				
-				setPixels();
 				break;
 			}
 			
@@ -588,22 +607,32 @@ class CPU extends Chip8
 						break;
 					}
 					
-					case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I. I itself is left unmodified
+					case 0x0055:	// 0xFX55: stores V0 to VX (including VX) in memory starting at address I.
 					{
 						for (int i = 0; i <= VXaddr.get(); i++)
 						{
 							memory[I.get() + i].set(V[i].get());
 						}
 						
+						if (nonlegacy)
+						{
+							I.set(VXaddr.get() + 1);
+						}
+						
 						nextOp();
 						break;
 					}
 					
-					case 0x0065:	// 0xFX65: fills V0 to VX (including VX) with values from memory starting at address I. I itself is left unmodified
+					case 0x0065:	// 0xFX65: fills V0 to VX (including VX) with values from memory starting at address I.
 					{
 						for (int i = 0; i <= VXaddr.get(); i++)
 						{
 							V[i].set(memory[I.get() + i].get());
+						}
+						
+						if (nonlegacy)
+						{
+							I.set(VXaddr.get() + 1);
 						}
 						
 						nextOp();
