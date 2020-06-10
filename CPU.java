@@ -17,7 +17,7 @@ class CPU extends Chip8
 	
 	UnsignedShort[] stack;
 	
-	boolean nonlegacy;
+	boolean legacy;
 	final String ANIMALHASH = "46497c35ce549cd7617462fe7c9fc284";
 	
 	boolean drawFlag;
@@ -54,7 +54,7 @@ class CPU extends Chip8
 		V = new UnsignedByte[16];
 		memory = new UnsignedByte[4096];
 		
-		nonlegacy = false;
+		legacy = false;
 		
 		drawFlag = false;
 		
@@ -139,7 +139,7 @@ class CPU extends Chip8
 			
 			if (loadedGameHash.equals(ANIMALHASH))
 			{
-				nonlegacy = true;
+				legacy = true;
 			}
 		}
 		
@@ -363,11 +363,11 @@ class CPU extends Chip8
 					
 					case 0x0006:	// 0x8X?6: stores the least significant bit of VX in VF and then shifts VX to the right by 1
 					{
-						if (nonlegacy)
+						if (legacy)
 						{
 							V[0xF].set(V[VYaddr.get()].get() & 0x01);
 							
-							V[VYaddr.get()].set(V[VYaddr.get()].get() >> 1);
+							V[VXaddr.get()].set(V[VYaddr.get()].get() >> 1);
 						}
 						
 						else
@@ -401,11 +401,11 @@ class CPU extends Chip8
 					
 					case 0x000E:	// 0x8X?E: stores the most significant bit of VX in VF and then shifts VX to the left by 1
 					{
-						if (nonlegacy)
+						if (legacy)
 						{
 							V[0xF].set((V[VYaddr.get()].get() & 0x80) >> 7);
 							
-							V[VYaddr.get()].set(V[VYaddr.get()].get() << 1);
+							V[VXaddr.get()].set(V[VYaddr.get()].get() << 1);
 						}
 						
 						else
@@ -614,9 +614,9 @@ class CPU extends Chip8
 							memory[I.get() + i].set(V[i].get());
 						}
 						
-						if (nonlegacy)
+						if (legacy)
 						{
-							I.set(VXaddr.get() + 1);
+							I.add(VXaddr.get() + 1);
 						}
 						
 						nextOp();
@@ -630,9 +630,9 @@ class CPU extends Chip8
 							V[i].set(memory[I.get() + i].get());
 						}
 						
-						if (nonlegacy)
+						if (legacy)
 						{
-							I.set(VXaddr.get() + 1);
+							I.add(VXaddr.get() + 1);
 						}
 						
 						nextOp();
