@@ -215,8 +215,6 @@ class CPU extends Chip8
 					
 					case 0x0230:	// 0x0230: clears the screen (hires)
 					{
-						System.out.println("bleh");
-						
 						clearDisplay();
 						
 						nextOp();
@@ -569,14 +567,17 @@ class CPU extends Chip8
 					
 					case 0x001E:	// 0xFX1E: adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't
 					{
-						if ((I.get() + V[VXaddr.get()].get()) > 0x0FFF)
+						if (!legacy)
 						{
-							V[0xF].set(1);
-						}
-						
-						else
-						{
-							V[0xF].set(0);
+							if ((I.get() + V[VXaddr.get()].get()) > 0x0FFF)
+							{
+								V[0xF].set(1);
+							}
+							
+							else
+							{
+								V[0xF].set(0);
+							}
 						}
 						
 						I.add(V[VXaddr.get()].get());
@@ -648,7 +649,6 @@ class CPU extends Chip8
 		if (delay_timer.get() > 0)
 		{
 			delay_timer.sub(1);
-			Thread.sleep(10);
 		}
 		
 		if (sound_timer.get() > 0)

@@ -52,8 +52,6 @@ public class Chip8
 					cpu.drawFlag = false;
 				}
 				
-				Thread.sleep(1);
-				
 				if (debug)
 				{
 					String debugString = "";
