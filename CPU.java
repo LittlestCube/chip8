@@ -662,6 +662,8 @@ class CPU extends Chip8
 				sound.stopBeep();
 			}
 		}
+		
+		Thread.sleep(1);
 	}
 	
 	boolean setPixel(int x, int y)
